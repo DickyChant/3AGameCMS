@@ -1,12 +1,16 @@
-# EWAAA (Triple Photon Analysis)
+# Triple Photon Analysis (γγγ)
 
-This repository contains the CMS analysis framework for **triple photon (γγγ) + VBF jets** events. The analysis selects events with three photons and two VBF jets for studying electroweak triple photon production.
+This repository contains the CMS analysis framework for **triple photon (γγγ) + jets** events. The analysis selects events with three photons and two jets.
 
 ## Analysis Overview
 
 - **Signal Region (SR)**: Events with ≥3 photons + 2 jets
 - **Sideband Regions (SB)**: Events with 1-2 photons + 2 jets (for background estimation)
 - **Variables**: Triple photon invariant mass (Maaa), pair masses (M_p1p2, M_p1p3, M_p2p3), kinematic variables for all three photons and jets
+
+## CMSSW Setup
+
+### Option 1: CMSSW_10_6_30 (Legacy)
 
 0. login to lxplus8 or lxplus9, execute "cmssw-el7" to launch the singularity. **This must be done before set up the CMSSW**, otherwise there will be imcompatibility between arch and cmssw
 1. cmsrel CMSSW_10_6_30
@@ -23,26 +27,53 @@ This repository contains the CMS analysis framework for **triple photon (γγγ)
    scram b
    ```
 
-3. Set up codes
-   ```bash
-   cd python/postprocessing
+### Option 2: CMSSW_13_0_X or later (Recommended for Run 3)
 
-   ##clone this repository
+For Run 3 analyses, NanoAOD-tools is integrated into newer CMSSW releases:
 
-   git clone https://github.com/menglu21/EWAA.git analysis
+```bash
+# On lxplus9 (no singularity needed)
+cmsrel CMSSW_13_0_13
+cd CMSSW_13_0_13/src
+cmsenv
 
-   cd $CMSSW_BASE/src
+# NanoAOD-tools is already available in PhysicsTools/NanoAODTools
+scram b
+```
 
-   scram b
-   ```
-    Noticed that the `crab_help.py` is written in python3, hence the `scram b` in CMSSW would leave some error message. Since this crab helper normally would not be included by other codes, you can ignore these errors.
+### Option 3: CMSSW_14_X (Latest)
 
-4. Substitute some outdated files with `init.sh`
-   ```bash
-   cd $CMSSW_BASE/src/PhysicsTools/NanoAODTools/python/postprocessing/analysis
+For the latest features and Run 3 UL corrections:
 
-   source init.sh 2017
-   ```
+```bash
+cmsrel CMSSW_14_0_7
+cd CMSSW_14_0_7/src
+cmsenv
+scram b
+```
+
+## Set up analysis codes
+
+```bash
+cd $CMSSW_BASE/src/PhysicsTools/NanoAODTools/python/postprocessing
+
+##clone this repository
+git clone <this-repository-url> analysis
+
+cd $CMSSW_BASE/src
+
+scram b
+```
+
+Note: The `crab_help.py` is written in python3, hence the `scram b` in CMSSW would leave some error message. Since this crab helper normally would not be included by other codes, you can ignore these errors.
+
+## Initialize for specific year
+
+```bash
+cd $CMSSW_BASE/src/PhysicsTools/NanoAODTools/python/postprocessing/analysis
+
+source init.sh 2017
+```
 
 ## submit jobs
 

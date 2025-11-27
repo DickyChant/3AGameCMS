@@ -30,7 +30,7 @@ def find_two_smallest(goodids, fakeids):
   return (p1,p2)
   
 
-class EWAAAProducer(Module):
+class TriPhotonProducer(Module):
   def __init__(self , year):
     self.year = year
   def beginJob(self):
@@ -497,7 +497,7 @@ class EWAAAProducer(Module):
 
     return True
 
-EWAAA2016apv = lambda: EWAAAProducer("2016apv")
-EWAAA2016 = lambda: EWAAAProducer("2016")
-EWAAA2017 = lambda: EWAAAProducer("2017")
-EWAAA2018 = lambda: EWAAAProducer("2018")
+TriPhoton2016apv = lambda: TriPhotonProducer("2016apv")
+TriPhoton2016 = lambda: TriPhotonProducer("2016")
+TriPhoton2017 = lambda: TriPhotonProducer("2017")
+TriPhoton2018 = lambda: TriPhotonProducer("2018")

@@ -1,4 +1,12 @@
-# EWAA
+# EWAAA (Triple Photon Analysis)
+
+This repository contains the CMS analysis framework for **triple photon (γγγ) + VBF jets** events. The analysis selects events with three photons and two VBF jets for studying electroweak triple photon production.
+
+## Analysis Overview
+
+- **Signal Region (SR)**: Events with ≥3 photons + 2 jets
+- **Sideband Regions (SB)**: Events with 1-2 photons + 2 jets (for background estimation)
+- **Variables**: Triple photon invariant mass (Maaa), pair masses (M_p1p2, M_p1p3, M_p2p3), kinematic variables for all three photons and jets
 
 0. login to lxplus8 or lxplus9, execute "cmssw-el7" to launch the singularity. **This must be done before set up the CMSSW**, otherwise there will be imcompatibility between arch and cmssw
 1. cmsrel CMSSW_10_6_30

@@ -14,6 +14,14 @@ from numpy import argsort
 
 MW, MZ = 80.4, 91.2
 
+def find_three_smallest(goodids, fakeids):
+  allids=goodids+fakeids
+  allids.sort()
+  p1=allids[0]
+  p2=allids[1]
+  p3=allids[2]
+  return (p1,p2,p3)
+
 def find_two_smallest(goodids, fakeids):
   allids=goodids+fakeids
   allids.sort()
@@ -22,7 +30,7 @@ def find_two_smallest(goodids, fakeids):
   return (p1,p2)
   
 
-class EWAAProducer(Module):
+class EWAAAProducer(Module):
   def __init__(self , year):
     self.year = year
   def beginJob(self):
@@ -55,34 +63,58 @@ class EWAAProducer(Module):
     self.out.branch("mjj","F")
     self.out.branch("SB_region","I")
     self.out.branch("SR_region","I")
+    # fake_flag for 3 photons: 0=all good, 1=p3 fake, 2=p2 fake, 3=p2&p3 fake, 4=p1 fake, 5=p1&p3 fake, 6=p1&p2 fake, 7=all fake
     self.out.branch("fake_flag","I")
-    self.out.branch("photon_pt_SB","F")
-    self.out.branch("photon_eta_SB","F")
-    self.out.branch("photon_phi_SB","F")
+    # Sideband region: 1 or 2 photons
+    self.out.branch("pho1_pt_SB","F")
+    self.out.branch("pho1_eta_SB","F")
+    self.out.branch("pho1_phi_SB","F")
+    self.out.branch("pho2_pt_SB","F")
+    self.out.branch("pho2_eta_SB","F")
+    self.out.branch("pho2_phi_SB","F")
     self.out.branch("dR_p1j1_SB","F")
     self.out.branch("dR_p1j2_SB","F")
+    self.out.branch("dR_p1p2_SB","F")
+    self.out.branch("Maa_SB","F")
     self.out.branch("zepp_SB","F")
+    # Signal region: 3 photons
     self.out.branch("pho1_pt_SR","F")
     self.out.branch("pho1_eta_SR","F")
     self.out.branch("pho1_phi_SR","F")
     self.out.branch("pho2_pt_SR","F")
     self.out.branch("pho2_eta_SR","F")
     self.out.branch("pho2_phi_SR","F")
+    self.out.branch("pho3_pt_SR","F")
+    self.out.branch("pho3_eta_SR","F")
+    self.out.branch("pho3_phi_SR","F")
     self.out.branch("dR_p1p2_SR","F")
+    self.out.branch("dR_p1p3_SR","F")
+    self.out.branch("dR_p2p3_SR","F")
     self.out.branch("dPhi_p1p2_SR","F")
+    self.out.branch("dPhi_p1p3_SR","F")
+    self.out.branch("dPhi_p2p3_SR","F")
     self.out.branch("dEta_p1p2_SR","F")
-    self.out.branch("Maa","F")
-    self.out.branch("Ptaa","F")
-    self.out.branch("Etaaa","F")
-    self.out.branch("Phiaa","F")
+    self.out.branch("dEta_p1p3_SR","F")
+    self.out.branch("dEta_p2p3_SR","F")
+    self.out.branch("M_p1p2","F")
+    self.out.branch("M_p1p3","F")
+    self.out.branch("M_p2p3","F")
+    self.out.branch("Maaa","F")
+    self.out.branch("Ptaaa","F")
+    self.out.branch("Etaaaa","F")
+    self.out.branch("Phiaaa","F")
     self.out.branch("dR_p1j1_SR","F")
     self.out.branch("dR_p1j2_SR","F")
     self.out.branch("dR_p2j1_SR","F")
     self.out.branch("dR_p2j2_SR","F")
+    self.out.branch("dR_p3j1_SR","F")
+    self.out.branch("dR_p3j2_SR","F")
     self.out.branch("dPhi_p1j1_SR","F")
     self.out.branch("dPhi_p1j2_SR","F")
     self.out.branch("dPhi_p2j1_SR","F")
     self.out.branch("dPhi_p2j2_SR","F")
+    self.out.branch("dPhi_p3j1_SR","F")
+    self.out.branch("dPhi_p3j2_SR","F")
     self.out.branch("zepp_SR","F")
 
     self.is_mc = bool(inputTree.GetBranch("GenJet_pt"))
@@ -197,6 +229,8 @@ class EWAAProducer(Module):
     self.out.fillBranch("TightJet_eta", TightJet_eta)
     self.out.fillBranch("TightJet_phi", TightJet_phi)
     self.out.fillBranch("TightJet_mass", TightJet_mass)
+    self.out.fillBranch("GoodPhoton_id", GoodPhoton_id)
+    self.out.fillBranch("FakePhoton_id", FakePhoton_id)
 
     if len(TightJet_id)<2:return False
     if len(GoodPhoton_id)+len(FakePhoton_id)==0:return False
@@ -233,119 +267,136 @@ class EWAAProducer(Module):
 
     SB_region=-1
     SR_region=-1
-    # fake_flag, 00: both prompt, 10: leading photon is fake, 01: subleading photon is fake, 11: both are fake
+    # fake_flag for 3 photons: uses binary encoding
+    # 0=all good(000), 1=p3 fake(001), 2=p2 fake(010), 3=p2&p3 fake(011), 
+    # 4=p1 fake(100), 5=p1&p3 fake(101), 6=p1&p2 fake(110), 7=all fake(111)
     fake_flag=-99
-    photon_pt_SB=-99
-    photon_eta_SB=-99
-    photon_phi_SB=-99
+    # Sideband variables (1 or 2 photons)
+    pho1_pt_SB=-99
+    pho1_eta_SB=-99
+    pho1_phi_SB=-99
+    pho2_pt_SB=-99
+    pho2_eta_SB=-99
+    pho2_phi_SB=-99
     dR_p1j1_SB=-99
     dR_p1j2_SB=-99
+    dR_p1p2_SB=-99
+    Maa_SB=-99
     zepp_SB=-99
+    # Signal region variables (3 photons)
     pho1_pt_SR=-99
     pho1_eta_SR=-99
     pho1_phi_SR=-99
     pho2_pt_SR=-99
     pho2_eta_SR=-99
     pho2_phi_SR=-99
+    pho3_pt_SR=-99
+    pho3_eta_SR=-99
+    pho3_phi_SR=-99
     dR_p1p2_SR=-99
+    dR_p1p3_SR=-99
+    dR_p2p3_SR=-99
     dPhi_p1p2_SR=-99
+    dPhi_p1p3_SR=-99
+    dPhi_p2p3_SR=-99
     dEta_p1p2_SR=-99
-    Maa=-99
-    Ptaa=-99
-    Etaaa=-99
-    Phiaa=-99
+    dEta_p1p3_SR=-99
+    dEta_p2p3_SR=-99
+    M_p1p2=-99
+    M_p1p3=-99
+    M_p2p3=-99
+    Maaa=-99
+    Ptaaa=-99
+    Etaaaa=-99
+    Phiaaa=-99
     dR_p1j1_SR=-99
     dR_p1j2_SR=-99
     dR_p2j1_SR=-99
     dR_p2j2_SR=-99
+    dR_p3j1_SR=-99
+    dR_p3j2_SR=-99
     dPhi_p1j1_SR=-99
     dPhi_p1j2_SR=-99
     dPhi_p2j1_SR=-99
     dPhi_p2j2_SR=-99
+    dPhi_p3j1_SR=-99
+    dPhi_p3j2_SR=-99
     zepp_SR=-99
 
     photon1_p4=TLorentzVector()
     photon2_p4=TLorentzVector()
-    # for fake photon estimation
-    if len(GoodPhoton_id)+len(FakePhoton_id)==1:
+    photon3_p4=TLorentzVector()
+    
+    total_photons = len(GoodPhoton_id)+len(FakePhoton_id)
+    
+    # Sideband region: 1 photon
+    if total_photons==1:
       SB_region=1
       if len(GoodPhoton_id)==1:
-        photon_pt_SB=photons[GoodPhoton_id[0]].pt
-        photon_eta_SB=photons[GoodPhoton_id[0]].eta
-        photon_phi_SB=photons[GoodPhoton_id[0]].phi
+        pho1_pt_SB=photons[GoodPhoton_id[0]].pt
+        pho1_eta_SB=photons[GoodPhoton_id[0]].eta
+        pho1_phi_SB=photons[GoodPhoton_id[0]].phi
       else:
-        photon_pt_SB=photons[FakePhoton_id[0]].pt
-        photon_eta_SB=photons[FakePhoton_id[0]].eta
-        photon_phi_SB=photons[FakePhoton_id[0]].phi
-      photon1_p4.SetPtEtaPhiM(photon_pt_SB,photon_eta_SB,photon_phi_SB,0)
+        pho1_pt_SB=photons[FakePhoton_id[0]].pt
+        pho1_eta_SB=photons[FakePhoton_id[0]].eta
+        pho1_phi_SB=photons[FakePhoton_id[0]].phi
+      photon1_p4.SetPtEtaPhiM(pho1_pt_SB,pho1_eta_SB,pho1_phi_SB,0)
       dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
       dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
-      zepp_SB=abs(photon_eta_SB - 0.5*(j1_eta+j2_eta))
+      zepp_SB=abs(pho1_eta_SB - 0.5*(j1_eta+j2_eta))
 
-    elif len(GoodPhoton_id)+len(FakePhoton_id)==2:
-      SR_region=1
+    # Sideband region: 2 photons
+    elif total_photons==2:
+      SB_region=2
       if len(GoodPhoton_id)==2:
-        fake_flag=0
         photon1_p4.SetPtEtaPhiM(photons[GoodPhoton_id[0]].pt,photons[GoodPhoton_id[0]].eta,photons[GoodPhoton_id[0]].phi,0)
         photon2_p4.SetPtEtaPhiM(photons[GoodPhoton_id[1]].pt,photons[GoodPhoton_id[1]].eta,photons[GoodPhoton_id[1]].phi,0)
       elif len(GoodPhoton_id)==1:
         if photons[GoodPhoton_id[0]].pt<photons[FakePhoton_id[0]].pt:
-          fake_flag=2
           photon1_p4.SetPtEtaPhiM(photons[FakePhoton_id[0]].pt,photons[FakePhoton_id[0]].eta,photons[FakePhoton_id[0]].phi,0)
           photon2_p4.SetPtEtaPhiM(photons[GoodPhoton_id[0]].pt,photons[GoodPhoton_id[0]].eta,photons[GoodPhoton_id[0]].phi,0)
         else:
-          fake_flag=1
           photon1_p4.SetPtEtaPhiM(photons[GoodPhoton_id[0]].pt,photons[GoodPhoton_id[0]].eta,photons[GoodPhoton_id[0]].phi,0)
           photon2_p4.SetPtEtaPhiM(photons[FakePhoton_id[0]].pt,photons[FakePhoton_id[0]].eta,photons[FakePhoton_id[0]].phi,0)
       else:
-        fake_flag=3
         photon1_p4.SetPtEtaPhiM(photons[FakePhoton_id[0]].pt,photons[FakePhoton_id[0]].eta,photons[FakePhoton_id[0]].phi,0)
         photon2_p4.SetPtEtaPhiM(photons[FakePhoton_id[1]].pt,photons[FakePhoton_id[1]].eta,photons[FakePhoton_id[1]].phi,0)
 
-      pho1_pt_SR=photon1_p4.Pt()
-      pho1_eta_SR=photon1_p4.Eta()
-      pho1_phi_SR=photon1_p4.Phi()
-      pho2_pt_SR=photon2_p4.Pt()
-      pho2_eta_SR=photon2_p4.Eta()
-      pho2_phi_SR=photon2_p4.Phi()
-      dR_p1p2_SR=photon1_p4.DeltaR(photon2_p4)
-      dPhi_p1p2_SR=photon1_p4.DeltaPhi(photon2_p4)
-      dEta_p1p2_SR=abs(pho1_eta_SR - pho2_eta_SR)
-      Maa=(photon1_p4+photon2_p4).M()
-      Ptaa=(photon1_p4+photon2_p4).Pt()
-      Etaaa=(photon1_p4+photon2_p4).Eta()
-      Phiaa=(photon1_p4+photon2_p4).Phi()
-      dR_p1j1_SR=photon1_p4.DeltaR(j1_p4)
-      dR_p1j2_SR=photon1_p4.DeltaR(j2_p4)
-      dR_p2j1_SR=photon2_p4.DeltaR(j1_p4)
-      dR_p2j2_SR=photon2_p4.DeltaR(j2_p4)
-      dPhi_p1j1_SR=photon1_p4.DeltaPhi(j1_p4)
-      dPhi_p1j2_SR=photon1_p4.DeltaPhi(j2_p4)
-      dPhi_p2j1_SR=photon2_p4.DeltaPhi(j1_p4)
-      dPhi_p2j2_SR=photon2_p4.DeltaPhi(j2_p4)
-      zepp_SR=abs((photon1_p4+photon2_p4).Eta() - 0.5*(j1_eta+j2_eta))
+      pho1_pt_SB=photon1_p4.Pt()
+      pho1_eta_SB=photon1_p4.Eta()
+      pho1_phi_SB=photon1_p4.Phi()
+      pho2_pt_SB=photon2_p4.Pt()
+      pho2_eta_SB=photon2_p4.Eta()
+      pho2_phi_SB=photon2_p4.Phi()
+      dR_p1p2_SB=photon1_p4.DeltaR(photon2_p4)
+      Maa_SB=(photon1_p4+photon2_p4).M()
+      dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
+      dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
+      zepp_SB=abs((photon1_p4+photon2_p4).Eta() - 0.5*(j1_eta+j2_eta))
 
-    elif len(GoodPhoton_id)+len(FakePhoton_id)>2:
-      p1_id,p2_id=find_two_smallest(GoodPhoton_id, FakePhoton_id)
-      if p1_id in GoodPhoton_id:
-        photon1_p4.SetPtEtaPhiM(photons[GoodPhoton_id[p1_id]].pt,photons[GoodPhoton_id[p1_id]].eta,photons[GoodPhoton_id[p1_id]].phi,0)
-      else:
-        photon1_p4.SetPtEtaPhiM(photons[FakePhoton_id[p1_id]].pt,photons[FakePhoton_id[p1_id]].eta,photons[FakePhoton_id[p1_id]].phi,0)
-      if p2_id in GoodPhoton_id:
-        photon2_p4.SetPtEtaPhiM(photons[GoodPhoton_id[p2_id]].pt,photons[GoodPhoton_id[p2_id]].eta,photons[GoodPhoton_id[p2_id]].phi,0)
-      else:
-        photon2_p4.SetPtEtaPhiM(photons[FakePhoton_id[p2_id]].pt,photons[FakePhoton_id[p2_id]].eta,photons[FakePhoton_id[p2_id]].phi,0)
+    # Signal region: 3 or more photons
+    elif total_photons>=3:
+      SR_region=1
+      # Get three photon indices sorted
+      all_photon_ids = GoodPhoton_id + FakePhoton_id
+      all_photon_ids.sort()
+      p1_id = all_photon_ids[0]
+      p2_id = all_photon_ids[1]
+      p3_id = all_photon_ids[2]
+      
+      photon1_p4.SetPtEtaPhiM(photons[p1_id].pt,photons[p1_id].eta,photons[p1_id].phi,0)
+      photon2_p4.SetPtEtaPhiM(photons[p2_id].pt,photons[p2_id].eta,photons[p2_id].phi,0)
+      photon3_p4.SetPtEtaPhiM(photons[p3_id].pt,photons[p3_id].eta,photons[p3_id].phi,0)
 
-      if p1_id in GoodPhoton_id:
-        if p2_id in GoodPhoton_id:
-          fake_flag=0
-        else:
-          fake_flag=1
-      else:
-        if p2_id in GoodPhoton_id:
-          fake_flag=2
-        else:
-          fake_flag=3
+      # Compute fake_flag using binary encoding: bit0=p3, bit1=p2, bit2=p1
+      # 0 if photon is good, 1 if photon is fake
+      fake_flag = 0
+      if p1_id in FakePhoton_id:
+        fake_flag += 4  # bit 2
+      if p2_id in FakePhoton_id:
+        fake_flag += 2  # bit 1
+      if p3_id in FakePhoton_id:
+        fake_flag += 1  # bit 0
 
       pho1_pt_SR=photon1_p4.Pt()
       pho1_eta_SR=photon1_p4.Eta()
@@ -353,55 +404,100 @@ class EWAAProducer(Module):
       pho2_pt_SR=photon2_p4.Pt()
       pho2_eta_SR=photon2_p4.Eta()
       pho2_phi_SR=photon2_p4.Phi()
+      pho3_pt_SR=photon3_p4.Pt()
+      pho3_eta_SR=photon3_p4.Eta()
+      pho3_phi_SR=photon3_p4.Phi()
+      
       dR_p1p2_SR=photon1_p4.DeltaR(photon2_p4)
+      dR_p1p3_SR=photon1_p4.DeltaR(photon3_p4)
+      dR_p2p3_SR=photon2_p4.DeltaR(photon3_p4)
       dPhi_p1p2_SR=photon1_p4.DeltaPhi(photon2_p4)
+      dPhi_p1p3_SR=photon1_p4.DeltaPhi(photon3_p4)
+      dPhi_p2p3_SR=photon2_p4.DeltaPhi(photon3_p4)
       dEta_p1p2_SR=abs(pho1_eta_SR - pho2_eta_SR)
-      Maa=(photon1_p4+photon2_p4).M()
-      Ptaa=(photon1_p4+photon2_p4).Pt()
-      Etaaa=(photon1_p4+photon2_p4).Eta()
-      Phiaa=(photon1_p4+photon2_p4).Phi()
+      dEta_p1p3_SR=abs(pho1_eta_SR - pho3_eta_SR)
+      dEta_p2p3_SR=abs(pho2_eta_SR - pho3_eta_SR)
+      
+      M_p1p2=(photon1_p4+photon2_p4).M()
+      M_p1p3=(photon1_p4+photon3_p4).M()
+      M_p2p3=(photon2_p4+photon3_p4).M()
+      Maaa=(photon1_p4+photon2_p4+photon3_p4).M()
+      Ptaaa=(photon1_p4+photon2_p4+photon3_p4).Pt()
+      Etaaaa=(photon1_p4+photon2_p4+photon3_p4).Eta()
+      Phiaaa=(photon1_p4+photon2_p4+photon3_p4).Phi()
+      
       dR_p1j1_SR=photon1_p4.DeltaR(j1_p4)
       dR_p1j2_SR=photon1_p4.DeltaR(j2_p4)
       dR_p2j1_SR=photon2_p4.DeltaR(j1_p4)
       dR_p2j2_SR=photon2_p4.DeltaR(j2_p4)
+      dR_p3j1_SR=photon3_p4.DeltaR(j1_p4)
+      dR_p3j2_SR=photon3_p4.DeltaR(j2_p4)
       dPhi_p1j1_SR=photon1_p4.DeltaPhi(j1_p4)
       dPhi_p1j2_SR=photon1_p4.DeltaPhi(j2_p4)
       dPhi_p2j1_SR=photon2_p4.DeltaPhi(j1_p4)
       dPhi_p2j2_SR=photon2_p4.DeltaPhi(j2_p4)
-      zepp_SR=abs((photon1_p4+photon2_p4).Eta() - 0.5*(j1_eta+j2_eta))
+      dPhi_p3j1_SR=photon3_p4.DeltaPhi(j1_p4)
+      dPhi_p3j2_SR=photon3_p4.DeltaPhi(j2_p4)
+      zepp_SR=abs((photon1_p4+photon2_p4+photon3_p4).Eta() - 0.5*(j1_eta+j2_eta))
 
-    self.out.fillBranch("photon_pt_SB",photon_pt_SB)
-    self.out.fillBranch("photon_eta_SB",photon_eta_SB)
-    self.out.fillBranch("photon_phi_SB",photon_phi_SB)
+    # Fill sideband branches
+    self.out.fillBranch("pho1_pt_SB",pho1_pt_SB)
+    self.out.fillBranch("pho1_eta_SB",pho1_eta_SB)
+    self.out.fillBranch("pho1_phi_SB",pho1_phi_SB)
+    self.out.fillBranch("pho2_pt_SB",pho2_pt_SB)
+    self.out.fillBranch("pho2_eta_SB",pho2_eta_SB)
+    self.out.fillBranch("pho2_phi_SB",pho2_phi_SB)
     self.out.fillBranch("dR_p1j1_SB",dR_p1j1_SB)
     self.out.fillBranch("dR_p1j2_SB",dR_p1j2_SB)
+    self.out.fillBranch("dR_p1p2_SB",dR_p1p2_SB)
+    self.out.fillBranch("Maa_SB",Maa_SB)
     self.out.fillBranch("zepp_SB",zepp_SB)
+    # Fill signal region branches
     self.out.fillBranch("pho1_pt_SR",pho1_pt_SR)
     self.out.fillBranch("pho1_eta_SR",pho1_eta_SR)
     self.out.fillBranch("pho1_phi_SR",pho1_phi_SR)
     self.out.fillBranch("pho2_pt_SR",pho2_pt_SR)
     self.out.fillBranch("pho2_eta_SR",pho2_eta_SR)
     self.out.fillBranch("pho2_phi_SR",pho2_phi_SR)
+    self.out.fillBranch("pho3_pt_SR",pho3_pt_SR)
+    self.out.fillBranch("pho3_eta_SR",pho3_eta_SR)
+    self.out.fillBranch("pho3_phi_SR",pho3_phi_SR)
     self.out.fillBranch("dR_p1p2_SR",dR_p1p2_SR)
+    self.out.fillBranch("dR_p1p3_SR",dR_p1p3_SR)
+    self.out.fillBranch("dR_p2p3_SR",dR_p2p3_SR)
     self.out.fillBranch("dPhi_p1p2_SR",dPhi_p1p2_SR)
+    self.out.fillBranch("dPhi_p1p3_SR",dPhi_p1p3_SR)
+    self.out.fillBranch("dPhi_p2p3_SR",dPhi_p2p3_SR)
     self.out.fillBranch("dEta_p1p2_SR",dEta_p1p2_SR)
-    self.out.fillBranch("Maa",Maa)
-    self.out.fillBranch("Ptaa",Ptaa)
-    self.out.fillBranch("Etaaa",Etaaa)
-    self.out.fillBranch("Phiaa",Phiaa)
+    self.out.fillBranch("dEta_p1p3_SR",dEta_p1p3_SR)
+    self.out.fillBranch("dEta_p2p3_SR",dEta_p2p3_SR)
+    self.out.fillBranch("M_p1p2",M_p1p2)
+    self.out.fillBranch("M_p1p3",M_p1p3)
+    self.out.fillBranch("M_p2p3",M_p2p3)
+    self.out.fillBranch("Maaa",Maaa)
+    self.out.fillBranch("Ptaaa",Ptaaa)
+    self.out.fillBranch("Etaaaa",Etaaaa)
+    self.out.fillBranch("Phiaaa",Phiaaa)
     self.out.fillBranch("dR_p1j1_SR",dR_p1j1_SR)
     self.out.fillBranch("dR_p1j2_SR",dR_p1j2_SR)
     self.out.fillBranch("dR_p2j1_SR",dR_p2j1_SR)
     self.out.fillBranch("dR_p2j2_SR",dR_p2j2_SR)
+    self.out.fillBranch("dR_p3j1_SR",dR_p3j1_SR)
+    self.out.fillBranch("dR_p3j2_SR",dR_p3j2_SR)
     self.out.fillBranch("dPhi_p1j1_SR",dPhi_p1j1_SR)
     self.out.fillBranch("dPhi_p1j2_SR",dPhi_p1j2_SR)
     self.out.fillBranch("dPhi_p2j1_SR",dPhi_p2j1_SR)
     self.out.fillBranch("dPhi_p2j2_SR",dPhi_p2j2_SR)
+    self.out.fillBranch("dPhi_p3j1_SR",dPhi_p3j1_SR)
+    self.out.fillBranch("dPhi_p3j2_SR",dPhi_p3j2_SR)
     self.out.fillBranch("zepp_SR",zepp_SR)
+    self.out.fillBranch("SB_region",SB_region)
+    self.out.fillBranch("SR_region",SR_region)
+    self.out.fillBranch("fake_flag",fake_flag)
 
     return True
 
-EWAA2016apv = lambda: EWAAProducer("2016apv")
-EWAA2016 = lambda: EWAAProducer("2016")
-EWAA2017 = lambda: EWAAProducer("2017")
-EWAA2018 = lambda: EWAAProducer("2018")
+EWAAA2016apv = lambda: EWAAAProducer("2016apv")
+EWAAA2016 = lambda: EWAAAProducer("2016")
+EWAAA2017 = lambda: EWAAAProducer("2017")
+EWAAA2018 = lambda: EWAAAProducer("2018")

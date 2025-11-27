@@ -1,6 +1,5 @@
 import ROOT
 from ROOT import TLorentzVector
-from itertools import combinations, permutations
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
@@ -9,26 +8,9 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 import math
 import os,copy
 import numpy as np
-from numpy import sign
-from numpy import argsort
 
 MW, MZ = 80.4, 91.2
 
-def find_three_smallest(goodids, fakeids):
-  allids=goodids+fakeids
-  allids.sort()
-  p1=allids[0]
-  p2=allids[1]
-  p3=allids[2]
-  return (p1,p2,p3)
-
-def find_two_smallest(goodids, fakeids):
-  allids=goodids+fakeids
-  allids.sort()
-  p1=allids[0]
-  p2=allids[1]
-  return (p1,p2)
-  
 
 class TriPhotonProducer(Module):
   def __init__(self , year):

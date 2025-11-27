@@ -13,7 +13,7 @@ This repository contains the CMS analysis framework for **triple photon (γγγ)
 
 ### Option 1: CMSSW_10_6_30 (Legacy)
 
-0. login to lxplus8 or lxplus9, execute "cmssw-el7" to launch the singularity. **This must be done before set up the CMSSW**, otherwise there will be imcompatibility between arch and cmssw
+0. login to lxplus8 or lxplus9, execute "cmssw-el7" to launch the singularity. **This must be done before set up the CMSSW**, otherwise there will be incompatibility between arch and cmssw
 1. cmsrel CMSSW_10_6_30
 2. Set up NanoAOD tools
    ```bash

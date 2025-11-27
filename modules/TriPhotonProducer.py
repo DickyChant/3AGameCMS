@@ -214,25 +214,43 @@ class TriPhotonProducer(Module):
     self.out.fillBranch("GoodPhoton_id", GoodPhoton_id)
     self.out.fillBranch("FakePhoton_id", FakePhoton_id)
 
-    if len(TightJet_id)<2:return False
+    # Require at least 1 photon (good or fake)
     if len(GoodPhoton_id)+len(FakePhoton_id)==0:return False
 
-    j1_pt=jets[TightJet_id[0]].pt_nom
-    j1_eta=jets[TightJet_id[0]].eta
-    j1_phi=jets[TightJet_id[0]].phi
-    j1_mass=jets[TightJet_id[0]].mass_nom
-    j2_pt=jets[TightJet_id[1]].pt_nom
-    j2_eta=jets[TightJet_id[1]].eta
-    j2_phi=jets[TightJet_id[1]].phi
-    j2_mass=jets[TightJet_id[1]].mass_nom
+    # Initialize jet variables with default values
+    j1_pt=-99
+    j1_eta=-99
+    j1_phi=-99
+    j1_mass=-99
+    j2_pt=-99
+    j2_eta=-99
+    j2_phi=-99
+    j2_mass=-99
+    dRjj=-99
+    dEtajj=-99
+    dPhijj=-99
+    mjj=-99
     j1_p4=TLorentzVector()
     j2_p4=TLorentzVector()
-    j1_p4.SetPtEtaPhiM(j1_pt,j1_eta,j1_phi,j1_mass)
-    j2_p4.SetPtEtaPhiM(j2_pt,j2_eta,j2_phi,j2_mass)
-    dRjj=j1_p4.DeltaR(j2_p4)
-    dEtajj=abs(j1_eta - j2_eta)
-    dPhijj=j1_p4.DeltaPhi(j2_p4)
-    mjj=(j1_p4 + j2_p4).M()
+    
+    # Fill jet variables if jets exist
+    if len(TightJet_id)>=1:
+      j1_pt=jets[TightJet_id[0]].pt_nom
+      j1_eta=jets[TightJet_id[0]].eta
+      j1_phi=jets[TightJet_id[0]].phi
+      j1_mass=jets[TightJet_id[0]].mass_nom
+      j1_p4.SetPtEtaPhiM(j1_pt,j1_eta,j1_phi,j1_mass)
+    
+    if len(TightJet_id)>=2:
+      j2_pt=jets[TightJet_id[1]].pt_nom
+      j2_eta=jets[TightJet_id[1]].eta
+      j2_phi=jets[TightJet_id[1]].phi
+      j2_mass=jets[TightJet_id[1]].mass_nom
+      j2_p4.SetPtEtaPhiM(j2_pt,j2_eta,j2_phi,j2_mass)
+      dRjj=j1_p4.DeltaR(j2_p4)
+      dEtajj=abs(j1_eta - j2_eta)
+      dPhijj=j1_p4.DeltaPhi(j2_p4)
+      mjj=(j1_p4 + j2_p4).M()
     
     self.out.fillBranch("j1_pt", j1_pt)
     self.out.fillBranch("j1_eta", j1_eta)
@@ -323,9 +341,12 @@ class TriPhotonProducer(Module):
         pho1_eta_SB=photons[FakePhoton_id[0]].eta
         pho1_phi_SB=photons[FakePhoton_id[0]].phi
       photon1_p4.SetPtEtaPhiM(pho1_pt_SB,pho1_eta_SB,pho1_phi_SB,0)
-      dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
-      dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
-      zepp_SB=abs(pho1_eta_SB - 0.5*(j1_eta+j2_eta))
+      # Jet-photon variables only if jets exist
+      if len(TightJet_id)>=1:
+        dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
+      if len(TightJet_id)>=2:
+        dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
+        zepp_SB=abs(pho1_eta_SB - 0.5*(j1_eta+j2_eta))
 
     # Sideband region: 2 photons
     elif total_photons==2:
@@ -352,9 +373,12 @@ class TriPhotonProducer(Module):
       pho2_phi_SB=photon2_p4.Phi()
       dR_p1p2_SB=photon1_p4.DeltaR(photon2_p4)
       Maa_SB=(photon1_p4+photon2_p4).M()
-      dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
-      dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
-      zepp_SB=abs((photon1_p4+photon2_p4).Eta() - 0.5*(j1_eta+j2_eta))
+      # Jet-photon variables only if jets exist
+      if len(TightJet_id)>=1:
+        dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
+      if len(TightJet_id)>=2:
+        dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
+        zepp_SB=abs((photon1_p4+photon2_p4).Eta() - 0.5*(j1_eta+j2_eta))
 
     # Signal region: 3 or more photons
     elif total_photons>=3:
@@ -408,19 +432,22 @@ class TriPhotonProducer(Module):
       Etaaaa=(photon1_p4+photon2_p4+photon3_p4).Eta()
       Phiaaa=(photon1_p4+photon2_p4+photon3_p4).Phi()
       
-      dR_p1j1_SR=photon1_p4.DeltaR(j1_p4)
-      dR_p1j2_SR=photon1_p4.DeltaR(j2_p4)
-      dR_p2j1_SR=photon2_p4.DeltaR(j1_p4)
-      dR_p2j2_SR=photon2_p4.DeltaR(j2_p4)
-      dR_p3j1_SR=photon3_p4.DeltaR(j1_p4)
-      dR_p3j2_SR=photon3_p4.DeltaR(j2_p4)
-      dPhi_p1j1_SR=photon1_p4.DeltaPhi(j1_p4)
-      dPhi_p1j2_SR=photon1_p4.DeltaPhi(j2_p4)
-      dPhi_p2j1_SR=photon2_p4.DeltaPhi(j1_p4)
-      dPhi_p2j2_SR=photon2_p4.DeltaPhi(j2_p4)
-      dPhi_p3j1_SR=photon3_p4.DeltaPhi(j1_p4)
-      dPhi_p3j2_SR=photon3_p4.DeltaPhi(j2_p4)
-      zepp_SR=abs((photon1_p4+photon2_p4+photon3_p4).Eta() - 0.5*(j1_eta+j2_eta))
+      # Jet-photon variables only if jets exist
+      if len(TightJet_id)>=1:
+        dR_p1j1_SR=photon1_p4.DeltaR(j1_p4)
+        dR_p2j1_SR=photon2_p4.DeltaR(j1_p4)
+        dR_p3j1_SR=photon3_p4.DeltaR(j1_p4)
+        dPhi_p1j1_SR=photon1_p4.DeltaPhi(j1_p4)
+        dPhi_p2j1_SR=photon2_p4.DeltaPhi(j1_p4)
+        dPhi_p3j1_SR=photon3_p4.DeltaPhi(j1_p4)
+      if len(TightJet_id)>=2:
+        dR_p1j2_SR=photon1_p4.DeltaR(j2_p4)
+        dR_p2j2_SR=photon2_p4.DeltaR(j2_p4)
+        dR_p3j2_SR=photon3_p4.DeltaR(j2_p4)
+        dPhi_p1j2_SR=photon1_p4.DeltaPhi(j2_p4)
+        dPhi_p2j2_SR=photon2_p4.DeltaPhi(j2_p4)
+        dPhi_p3j2_SR=photon3_p4.DeltaPhi(j2_p4)
+        zepp_SR=abs((photon1_p4+photon2_p4+photon3_p4).Eta() - 0.5*(j1_eta+j2_eta))
 
     # Fill sideband branches
     self.out.fillBranch("pho1_pt_SB",pho1_pt_SB)

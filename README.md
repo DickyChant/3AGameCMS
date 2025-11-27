@@ -1,12 +1,13 @@
 # Triple Photon Analysis (γγγ)
 
-This repository contains the CMS analysis framework for **triple photon (γγγ) + jets** events. The analysis selects events with three photons and two jets.
+This repository contains the CMS analysis framework for **triple photon (γγγ)** events. The analysis selects events with three photons.
 
 ## Analysis Overview
 
-- **Signal Region (SR)**: Events with ≥3 photons + 2 jets
-- **Sideband Regions (SB)**: Events with 1-2 photons + 2 jets (for background estimation)
-- **Variables**: Triple photon invariant mass (Maaa), pair masses (M_p1p2, M_p1p3, M_p2p3), kinematic variables for all three photons and jets
+- **Signal Region (SR)**: Events with ≥3 photons
+- **Sideband Regions (SB)**: Events with 1-2 photons (for background estimation)
+- **Variables**: Triple photon invariant mass (Maaa), pair masses (M_p1p2, M_p1p3, M_p2p3), kinematic variables for all three photons
+- **Optional jet variables**: If jets are present in the event, jet-photon angular variables are computed
 
 ## CMSSW Setup
 

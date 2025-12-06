@@ -14,11 +14,11 @@ class PhoIDSFProducer(Module):
     self.id_medium = "Pho_Medium.root"
     self.id_tight = "Pho_Tight.root"
     self.SF_location_path = "%s/src/PhysicsTools/NanoAODTools/python/postprocessing/analysis/data/year%s/" %(os.environ['CMSSW_BASE'], self.year)
-    print 'SF location:', self.SF_location_path
+    print('SF location:', self.SF_location_path)
 
   def beginJob(self):
-    print 'begin to set Photon ID SF --->>>'
-    print 'start to open SF root file --->>>'
+    print('begin to set Photon ID SF --->>>')
+    print('start to open SF root file --->>>')
     # init the TH2F
     self.pixel_veto_med_dir= ROOT.TDirectoryFile()
     self.pixel_veto_tig_dir= ROOT.TDirectoryFile()
@@ -37,14 +37,14 @@ class PhoIDSFProducer(Module):
     self.pixel_veto_tig_dir.GetObject('SF_HasPix_TightID', self.pixel_veto_tig_th1f)
     self.file_id_medium.GetObject('EGamma_SF2D', self.id_medium_th2f)
     self.file_id_tight.GetObject('EGamma_SF2D', self.id_tight_th2f)
-    print 'open SF files successfully --->>>'
+    print('open SF files successfully --->>>')
 
   def endJob(self):
-    print 'close SF root file --->>>'
+    print('close SF root file --->>>')
     self.file_pixel_veto.Close()
     self.file_id_medium.Close()
     self.file_id_tight.Close()
-    print 'finish setting Photon ID SF --->>>'
+    print('finish setting Photon ID SF --->>>')
     
   def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
     self.out = wrappedOutputTree

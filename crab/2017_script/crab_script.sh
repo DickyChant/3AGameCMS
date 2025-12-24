@@ -15,5 +15,5 @@ echo $PYTHON_PATH
 echo $PWD 
 
 echo Found Proxy in: $X509_USER_PROXY
-python crab_script.py -m --year 2017
+python3 crab_script.py -m --year 2017
 fi

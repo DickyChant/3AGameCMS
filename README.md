@@ -88,6 +88,17 @@ rm crab_DoubleEG_B/inputs/*.tgz
 
 You can also check `crab/auto_crab_example` to run crab jobs batchly and automatically.
 
+## Local running (updated for 2022/2022EE)
+
+- Entry point: `analysis/test/localrun.py`
+- Supported years: `2016a`, `2016b`, `2017`, `2018`, `2022` (preEE, CD), `2022EE` (postEE, EFG)
+- Run examples:
+  - MC preEE: `python localrun.py --year 2022 -m -i <input.root> -o <outdir>`
+  - Data postEE: `python localrun.py --year 2022EE -d -i <input.root> -o <outdir>`
+- JME: tries `jetmetHelperRun3.createJMECorrector`; if not in your env, it prints a warning and skips JME for 2022/2022EE.
+- Photon ID SF: only wired for Run2 (2016–2018). No 2022 SF module/files are hooked up yet.
+- PU/prefire: only Run2 PU/prefire are attached. 2022 PU weights are not yet added in `localrun.py`.
+
 ## corrections
 
 the modules (most of them are corrections) used can be seen from analysis/crab/crab_script.py,
@@ -143,5 +154,9 @@ move "others/for_prefiring/*.root" to NanoAODTools/data/prefire_maps/, and move 
 ### 3. JME correction
 (needed files are in others/for_jme, can be used directly)
 move the *.tgz to PhysicsTools/NanoAODTools/data/jme, and move "jetmetHelperRun2.py" to PhysicsTools/NanoAODTools/python/postprocessing/modules/jme
+
+### Run3 note (2022/2022EE)
+- Local running uses `jetmetHelperRun3.createJMECorrector` if present for JME; otherwise JME is skipped.
+- Run3 photon ID SF / PU weights are not yet configured here; add the corresponding modules and ROOT files before production use.
 
 ## After finisihing all the file moving, please remember delete the "others" directory, as the crab submission have size limit.

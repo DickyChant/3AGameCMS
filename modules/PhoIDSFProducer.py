@@ -18,7 +18,9 @@ class PhoIDSFProducer(Module):
       "2016apv": "2016preVFP",
       "2016": "2016postVFP",
       "2017": "2017",
-      "2018": "2018"
+      "2018": "2018",
+      "2022": "2022preEE",
+      "2022EE": "2022postEE",
     }
     self.era = year_to_era.get(year, year)
     # Map year to CVMFS path structure
@@ -26,7 +28,9 @@ class PhoIDSFProducer(Module):
       "2016apv": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2016preVFP-UL-NanoAODv9/latest/photon.json.gz",
       "2016": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2016postVFP-UL-NanoAODv9/latest/photon.json.gz",
       "2017": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2017-UL-NanoAODv9/latest/photon.json.gz",
-      "2018": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2018-UL-NanoAODv9/latest/photon.json.gz"
+      "2018": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2018-UL-NanoAODv9/latest/photon.json.gz",
+      "2022": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run3-22CDSep23-Summer22-NanoAODv12/photon.json.gz",
+      "2022EE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run3-22EFGSep23-Summer22EE-NanoAODv12/photon.json.gz",
     }
     self.photon_sf_path = year_to_cvmfs_path.get(year, None)
     if self.photon_sf_path is None:
@@ -275,3 +279,5 @@ PhoIDSF2016apv = lambda: PhoIDSFProducer("2016apv")
 PhoIDSF2016 = lambda: PhoIDSFProducer("2016")
 PhoIDSF2017 = lambda: PhoIDSFProducer("2017")
 PhoIDSF2018 = lambda: PhoIDSFProducer("2018")
+PhoIDSF2022 = lambda: PhoIDSFProducer("2022")
+PhoIDSF2022EE = lambda: PhoIDSFProducer("2022EE")

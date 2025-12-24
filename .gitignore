@@ -100,3 +100,9 @@ venv.bak/
 # CRAB logs and outputs
 crab_*/
 *.tgz
+
+
+# Test 
+
+**/*test*/**
+!test/

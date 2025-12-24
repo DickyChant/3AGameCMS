@@ -29,6 +29,17 @@ def run_one(cmd):
         return cmd, 1, "", f"exception: {exc}"
 
 
+def format_tail(text: str, tail: int) -> str:
+    """Return the full text or only the last N lines with an indicator."""
+    stripped = text.strip()
+    if not stripped or tail == 0:
+        return stripped
+    lines = stripped.splitlines()
+    if len(lines) <= tail:
+        return stripped
+    return "\n".join(["[...]"] + lines[-tail:])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Lightweight launcher to run localrun.py over many files in parallel.")
     parser.add_argument("--pattern", required=True, help="Input glob or directory (e.g. /path/to/*.root or /path/to/dir/)")
@@ -37,6 +48,9 @@ def main():
     parser.add_argument("--data", action="store_true", help="Run as data (adds -d); default is MC (-m)")
     parser.add_argument("-n", "--nEve", type=int, default=None, help="Max events to process")
     parser.add_argument("--njobs", type=int, default=4, help="Number of parallel jobs")
+    parser.add_argument("--print-cmds", action="store_true", help="Print each command before dispatch")
+    parser.add_argument("--print-logs", action="store_true", help="Print stdout/stderr for each finished job")
+    parser.add_argument("--tail", type=int, default=20, help="When printing logs, number of trailing lines to show (0 = full)")
     args = parser.parse_args()
 
     files = collect_files(args.pattern)
@@ -55,6 +69,8 @@ def main():
     for f in files:
         cmd = ["python3", localrun] + base_flags + ["-i", f]
         commands.append(" ".join(cmd))
+        if args.print_cmds:
+            print(f"[launcher] cmd: {commands[-1]}")
 
     print(f"[launcher] Prepared {len(commands)} jobs; running with njobs={args.njobs}")
 
@@ -63,6 +79,15 @@ def main():
         futures = {ex.submit(run_one, c): c for c in commands}
         for fut in as_completed(futures):
             cmd, rc, out, err = fut.result()
+            if args.print_logs or rc != 0:
+                print(f"[job] rc={rc} cmd={cmd}")
+                if out.strip():
+                    print("[stdout]")
+                    print(format_tail(out, args.tail))
+                if err.strip():
+                    print("[stderr]")
+                    print(format_tail(err, args.tail))
+                print("-" * 60)
             if rc != 0:
                 failures.append((cmd, rc, err.strip()))
 

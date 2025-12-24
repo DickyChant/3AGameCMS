@@ -54,11 +54,8 @@ class TriPhotonProducer(Module):
     self.out.branch("pho2_pt_SB","F")
     self.out.branch("pho2_eta_SB","F")
     self.out.branch("pho2_phi_SB","F")
-    self.out.branch("dR_p1j1_SB","F")
-    self.out.branch("dR_p1j2_SB","F")
     self.out.branch("dR_p1p2_SB","F")
     self.out.branch("Maa_SB","F")
-    self.out.branch("zepp_SB","F")
     # Signal region: 3 photons
     self.out.branch("pho1_pt_SR","F")
     self.out.branch("pho1_eta_SR","F")
@@ -85,19 +82,6 @@ class TriPhotonProducer(Module):
     self.out.branch("Ptaaa","F")
     self.out.branch("Etaaaa","F")
     self.out.branch("Phiaaa","F")
-    self.out.branch("dR_p1j1_SR","F")
-    self.out.branch("dR_p1j2_SR","F")
-    self.out.branch("dR_p2j1_SR","F")
-    self.out.branch("dR_p2j2_SR","F")
-    self.out.branch("dR_p3j1_SR","F")
-    self.out.branch("dR_p3j2_SR","F")
-    self.out.branch("dPhi_p1j1_SR","F")
-    self.out.branch("dPhi_p1j2_SR","F")
-    self.out.branch("dPhi_p2j1_SR","F")
-    self.out.branch("dPhi_p2j2_SR","F")
-    self.out.branch("dPhi_p3j1_SR","F")
-    self.out.branch("dPhi_p3j2_SR","F")
-    self.out.branch("zepp_SR","F")
 
     self.is_mc = bool(inputTree.GetBranch("GenJet_pt"))
     self.is_lhe = bool(inputTree.GetBranch("nLHEPart"))
@@ -278,11 +262,8 @@ class TriPhotonProducer(Module):
     pho2_pt_SB=-99
     pho2_eta_SB=-99
     pho2_phi_SB=-99
-    dR_p1j1_SB=-99
-    dR_p1j2_SB=-99
     dR_p1p2_SB=-99
     Maa_SB=-99
-    zepp_SB=-99
     # Signal region variables (3 photons)
     pho1_pt_SR=-99
     pho1_eta_SR=-99
@@ -309,19 +290,6 @@ class TriPhotonProducer(Module):
     Ptaaa=-99
     Etaaaa=-99
     Phiaaa=-99
-    dR_p1j1_SR=-99
-    dR_p1j2_SR=-99
-    dR_p2j1_SR=-99
-    dR_p2j2_SR=-99
-    dR_p3j1_SR=-99
-    dR_p3j2_SR=-99
-    dPhi_p1j1_SR=-99
-    dPhi_p1j2_SR=-99
-    dPhi_p2j1_SR=-99
-    dPhi_p2j2_SR=-99
-    dPhi_p3j1_SR=-99
-    dPhi_p3j2_SR=-99
-    zepp_SR=-99
 
     photon1_p4=TLorentzVector()
     photon2_p4=TLorentzVector()
@@ -341,29 +309,17 @@ class TriPhotonProducer(Module):
         pho1_eta_SB=photons[FakePhoton_id[0]].eta
         pho1_phi_SB=photons[FakePhoton_id[0]].phi
       photon1_p4.SetPtEtaPhiM(pho1_pt_SB,pho1_eta_SB,pho1_phi_SB,0)
-      # Jet-photon variables only if jets exist
-      if len(TightJet_id)>=1:
-        dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
-      if len(TightJet_id)>=2:
-        dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
-        zepp_SB=abs(pho1_eta_SB - 0.5*(j1_eta+j2_eta))
 
     # Sideband region: 2 photons
     elif total_photons==2:
       SB_region=2
-      if len(GoodPhoton_id)==2:
-        photon1_p4.SetPtEtaPhiM(photons[GoodPhoton_id[0]].pt,photons[GoodPhoton_id[0]].eta,photons[GoodPhoton_id[0]].phi,0)
-        photon2_p4.SetPtEtaPhiM(photons[GoodPhoton_id[1]].pt,photons[GoodPhoton_id[1]].eta,photons[GoodPhoton_id[1]].phi,0)
-      elif len(GoodPhoton_id)==1:
-        if photons[GoodPhoton_id[0]].pt<photons[FakePhoton_id[0]].pt:
-          photon1_p4.SetPtEtaPhiM(photons[FakePhoton_id[0]].pt,photons[FakePhoton_id[0]].eta,photons[FakePhoton_id[0]].phi,0)
-          photon2_p4.SetPtEtaPhiM(photons[GoodPhoton_id[0]].pt,photons[GoodPhoton_id[0]].eta,photons[GoodPhoton_id[0]].phi,0)
-        else:
-          photon1_p4.SetPtEtaPhiM(photons[GoodPhoton_id[0]].pt,photons[GoodPhoton_id[0]].eta,photons[GoodPhoton_id[0]].phi,0)
-          photon2_p4.SetPtEtaPhiM(photons[FakePhoton_id[0]].pt,photons[FakePhoton_id[0]].eta,photons[FakePhoton_id[0]].phi,0)
-      else:
-        photon1_p4.SetPtEtaPhiM(photons[FakePhoton_id[0]].pt,photons[FakePhoton_id[0]].eta,photons[FakePhoton_id[0]].phi,0)
-        photon2_p4.SetPtEtaPhiM(photons[FakePhoton_id[1]].pt,photons[FakePhoton_id[1]].eta,photons[FakePhoton_id[1]].phi,0)
+      # Sort photons by pt (leading, sub-leading) - following ATLAS triphoton analysis methodology
+      all_photon_ids_2 = GoodPhoton_id + FakePhoton_id
+      all_photon_ids_2.sort(key=lambda idx: photons[idx].pt, reverse=True)
+      p1_id_2 = all_photon_ids_2[0]  # Leading photon
+      p2_id_2 = all_photon_ids_2[1]  # Sub-leading photon
+      photon1_p4.SetPtEtaPhiM(photons[p1_id_2].pt,photons[p1_id_2].eta,photons[p1_id_2].phi,0)
+      photon2_p4.SetPtEtaPhiM(photons[p2_id_2].pt,photons[p2_id_2].eta,photons[p2_id_2].phi,0)
 
       pho1_pt_SB=photon1_p4.Pt()
       pho1_eta_SB=photon1_p4.Eta()
@@ -373,22 +329,17 @@ class TriPhotonProducer(Module):
       pho2_phi_SB=photon2_p4.Phi()
       dR_p1p2_SB=photon1_p4.DeltaR(photon2_p4)
       Maa_SB=(photon1_p4+photon2_p4).M()
-      # Jet-photon variables only if jets exist
-      if len(TightJet_id)>=1:
-        dR_p1j1_SB=j1_p4.DeltaR(photon1_p4)
-      if len(TightJet_id)>=2:
-        dR_p1j2_SB=j2_p4.DeltaR(photon1_p4)
-        zepp_SB=abs((photon1_p4+photon2_p4).Eta() - 0.5*(j1_eta+j2_eta))
 
     # Signal region: 3 or more photons
     elif total_photons>=3:
       SR_region=1
-      # Get three photon indices sorted
+      # Get three photon indices sorted by transverse momentum (pt) - following ATLAS triphoton analysis methodology
       all_photon_ids = GoodPhoton_id + FakePhoton_id
-      all_photon_ids.sort()
-      p1_id = all_photon_ids[0]
-      p2_id = all_photon_ids[1]
-      p3_id = all_photon_ids[2]
+      # Sort by pt in descending order (leading, sub-leading, third-leading)
+      all_photon_ids.sort(key=lambda idx: photons[idx].pt, reverse=True)
+      p1_id = all_photon_ids[0]  # Leading photon (highest pt)
+      p2_id = all_photon_ids[1]  # Sub-leading photon
+      p3_id = all_photon_ids[2]  # Third-leading photon
       
       photon1_p4.SetPtEtaPhiM(photons[p1_id].pt,photons[p1_id].eta,photons[p1_id].phi,0)
       photon2_p4.SetPtEtaPhiM(photons[p2_id].pt,photons[p2_id].eta,photons[p2_id].phi,0)
@@ -431,23 +382,6 @@ class TriPhotonProducer(Module):
       Ptaaa=(photon1_p4+photon2_p4+photon3_p4).Pt()
       Etaaaa=(photon1_p4+photon2_p4+photon3_p4).Eta()
       Phiaaa=(photon1_p4+photon2_p4+photon3_p4).Phi()
-      
-      # Jet-photon variables only if jets exist
-      if len(TightJet_id)>=1:
-        dR_p1j1_SR=photon1_p4.DeltaR(j1_p4)
-        dR_p2j1_SR=photon2_p4.DeltaR(j1_p4)
-        dR_p3j1_SR=photon3_p4.DeltaR(j1_p4)
-        dPhi_p1j1_SR=photon1_p4.DeltaPhi(j1_p4)
-        dPhi_p2j1_SR=photon2_p4.DeltaPhi(j1_p4)
-        dPhi_p3j1_SR=photon3_p4.DeltaPhi(j1_p4)
-      if len(TightJet_id)>=2:
-        dR_p1j2_SR=photon1_p4.DeltaR(j2_p4)
-        dR_p2j2_SR=photon2_p4.DeltaR(j2_p4)
-        dR_p3j2_SR=photon3_p4.DeltaR(j2_p4)
-        dPhi_p1j2_SR=photon1_p4.DeltaPhi(j2_p4)
-        dPhi_p2j2_SR=photon2_p4.DeltaPhi(j2_p4)
-        dPhi_p3j2_SR=photon3_p4.DeltaPhi(j2_p4)
-        zepp_SR=abs((photon1_p4+photon2_p4+photon3_p4).Eta() - 0.5*(j1_eta+j2_eta))
 
     # Fill sideband branches
     self.out.fillBranch("pho1_pt_SB",pho1_pt_SB)
@@ -456,11 +390,8 @@ class TriPhotonProducer(Module):
     self.out.fillBranch("pho2_pt_SB",pho2_pt_SB)
     self.out.fillBranch("pho2_eta_SB",pho2_eta_SB)
     self.out.fillBranch("pho2_phi_SB",pho2_phi_SB)
-    self.out.fillBranch("dR_p1j1_SB",dR_p1j1_SB)
-    self.out.fillBranch("dR_p1j2_SB",dR_p1j2_SB)
     self.out.fillBranch("dR_p1p2_SB",dR_p1p2_SB)
     self.out.fillBranch("Maa_SB",Maa_SB)
-    self.out.fillBranch("zepp_SB",zepp_SB)
     # Fill signal region branches
     self.out.fillBranch("pho1_pt_SR",pho1_pt_SR)
     self.out.fillBranch("pho1_eta_SR",pho1_eta_SR)
@@ -487,19 +418,6 @@ class TriPhotonProducer(Module):
     self.out.fillBranch("Ptaaa",Ptaaa)
     self.out.fillBranch("Etaaaa",Etaaaa)
     self.out.fillBranch("Phiaaa",Phiaaa)
-    self.out.fillBranch("dR_p1j1_SR",dR_p1j1_SR)
-    self.out.fillBranch("dR_p1j2_SR",dR_p1j2_SR)
-    self.out.fillBranch("dR_p2j1_SR",dR_p2j1_SR)
-    self.out.fillBranch("dR_p2j2_SR",dR_p2j2_SR)
-    self.out.fillBranch("dR_p3j1_SR",dR_p3j1_SR)
-    self.out.fillBranch("dR_p3j2_SR",dR_p3j2_SR)
-    self.out.fillBranch("dPhi_p1j1_SR",dPhi_p1j1_SR)
-    self.out.fillBranch("dPhi_p1j2_SR",dPhi_p1j2_SR)
-    self.out.fillBranch("dPhi_p2j1_SR",dPhi_p2j1_SR)
-    self.out.fillBranch("dPhi_p2j2_SR",dPhi_p2j2_SR)
-    self.out.fillBranch("dPhi_p3j1_SR",dPhi_p3j1_SR)
-    self.out.fillBranch("dPhi_p3j2_SR",dPhi_p3j2_SR)
-    self.out.fillBranch("zepp_SR",zepp_SR)
     self.out.fillBranch("SB_region",SB_region)
     self.out.fillBranch("SR_region",SR_region)
     self.out.fillBranch("fake_flag",fake_flag)

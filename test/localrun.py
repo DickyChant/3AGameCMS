@@ -32,18 +32,38 @@ def main():
   parser.add_option('-m', dest='ismc', help='to apply sf correction or not', default=True, action='store_true')
   parser.add_option('-d', dest='ismc', help='to apply sf correction or not', action='store_false')
   parser.add_option('-n','--nEve', dest='nEvent', help='number of event', type='int', action='store')
-  parser.add_option('-i', '--in', dest='inputs', help='input file, directory, or glob (e.g. /path/*.root)', default=None, type='string')
+  parser.add_option('-i', '--in', dest='inputs', help='input file, directory, or glob (e.g. /path/*.root)', default=[], action='append', type='string')
   parser.add_option('-o', '--out', dest='output', help='output directory with files', default=None, type='string')
+  parser.add_option('--keep-and-drop', dest='keep_and_drop', help='path to keep_and_drop.txt file (default: auto-detect from script location)', default=None, type='string')
+  parser.add_option('--postfix', dest='postfix', help='postfix for output files (e.g., _Skim)', default=None, type='string')
+  parser.add_option('--hadd-output', dest='hadd_output', help='if multiple inputs, merge them into this output file', default=None, type='string')
   (opt, args) = parser.parse_args()
 
+  # Find keep_and_drop.txt - use provided path or auto-detect
+  if opt.keep_and_drop:
+    keep_and_drop = opt.keep_and_drop
+    if not os.path.exists(keep_and_drop):
+      raise RuntimeError(f"Specified keep_and_drop file not found: {keep_and_drop}")
+  else:
+    # Auto-detect: look in script directory, then analysis root
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    keep_and_drop = os.path.join(script_dir, "keep_and_drop.txt")
+    if not os.path.exists(keep_and_drop):
+      analysis_root = os.path.dirname(os.path.dirname(script_dir))
+      keep_and_drop = os.path.join(analysis_root, "keep_and_drop.txt")
+    if not os.path.exists(keep_and_drop):
+      raise RuntimeError(f"Cannot find keep_and_drop.txt. Looked in {script_dir} and {analysis_root}. Use --keep-and-drop to specify path.")
+
   # Expand input to a list of files
+  # opt.inputs is now a list (can have multiple -i arguments)
   input_files = []
   if opt.inputs:
-    if os.path.isdir(opt.inputs):
-      input_files = sorted(glob.glob(os.path.join(opt.inputs, "*.root")))
-    else:
-      globbed = sorted(glob.glob(opt.inputs))
-      input_files = globbed if len(globbed) > 0 else [opt.inputs]
+    for input_pattern in opt.inputs:
+      if os.path.isdir(input_pattern):
+        input_files.extend(sorted(glob.glob(os.path.join(input_pattern, "*.root"))))
+      else:
+        globbed = sorted(glob.glob(input_pattern))
+        input_files.extend(globbed if len(globbed) > 0 else [input_pattern])
   if len(input_files) == 0:
     raise RuntimeError("No input files found for pattern/path: %s" % opt.inputs)
 
@@ -61,79 +81,80 @@ def main():
       applySmearing=is_mc,
       jetType="AK4PFchs"
     )
-    return corrector()
+    # corrector might be None if JME not implemented yet for Run3
+    return corrector() if corrector is not None else None
 
   if opt.ismc:
     if opt.year == "2016a":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2016_preAPV(),PhoIDSF2016apv(),jmeCorrections_UL2016APVMC(), TriPhoton2016apv()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2016_preAPV(),PhoIDSF2016apv(),jmeCorrections_UL2016APVMC(), TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016b":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2016_postAPV(),PhoIDSF2016(),jmeCorrections_UL2016MC(),TriPhoton2016()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2016_postAPV(),PhoIDSF2016(),jmeCorrections_UL2016MC(),TriPhoton2016()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2017(),PhoIDSF2017(),jmeCorrections_UL2017MC(),TriPhoton2017()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2017(),PhoIDSF2017(),jmeCorrections_UL2017MC(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2018":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2018(),PhoIDSF2018(),jmeCorrections_UL2018MC(),TriPhoton2018()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2018(),PhoIDSF2018(),jmeCorrections_UL2018MC(),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2022":
-      mods = [countHistogramsModule(), PUWeight2022(), PhoIDSF2022(), TriPhotonProducer("2022")]
+      mods = [countHistogramsModule(), PUWeight2022(), PhoIDSF2022(), TriPhoton2022()]
       jme_mod = maybe_jme_2022(is_mc=True, era="CD")
       if jme_mod is not None:
         mods.insert(-1, jme_mod)
-      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent,haddFileName=opt.hadd_output)
     if opt.year == "2022EE":
-      mods = [countHistogramsModule(), PUWeight2022EE(), PhoIDSF2022EE(), TriPhotonProducer("2022EE")]
+      mods = [countHistogramsModule(), PUWeight2022EE(), PhoIDSF2022EE(), TriPhoton2022EE()]
       jme_mod = maybe_jme_2022(is_mc=True, era="EFG")
       if jme_mod is not None:
         mods.insert(-1, jme_mod)
-      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent,haddFileName=opt.hadd_output)
 
 
 # Sequence for data
   if not (opt.ismc):
     if opt.year == "2016b":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016B(),TriPhoton2016apv()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016B(),TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016c":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016C(),TriPhoton2016apv()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016C(),TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016d":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016D(),TriPhoton2016apv()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016D(),TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016e":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016E(),TriPhoton2016apv()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016E(),TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016f_apv":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016APVF(),TriPhoton2016apv()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016APVF(),TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016f":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016F(),TriPhoton2016()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016F(),TriPhoton2016()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016g":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016G(),TriPhoton2016()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016G(),TriPhoton2016()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016h":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016H(),TriPhoton2016()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2016H(),TriPhoton2016()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017b":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017B(),TriPhoton2017()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017B(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017c":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017C(),TriPhoton2017()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017C(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017d":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017D(),TriPhoton2017()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017D(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017e":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017E(),TriPhoton2017()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017E(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017f":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017F(),TriPhoton2017()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2017F(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2018a":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018A(),TriPhoton2018()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018A(),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2018b":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018B(),TriPhoton2018()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018B(),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2018c":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018C(),TriPhoton2018()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018C(),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2018d":
-      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018D(),TriPhoton2018()], provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[jmeCorrections_UL2018D(),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2022":
-      mods = [TriPhotonProducer("2022")]
+      mods = [TriPhoton2022()]
       jme_mod = maybe_jme_2022(is_mc=False, era="CD")
       if jme_mod is not None:
         mods.insert(0, jme_mod)
-      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent,haddFileName=opt.hadd_output)
     if opt.year == "2022EE":
-      mods = [TriPhotonProducer("2022EE")]
+      mods = [TriPhoton2022EE()]
       jme_mod = maybe_jme_2022(is_mc=False, era="EFG")
       if jme_mod is not None:
         mods.insert(0, jme_mod)
-      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=True, jsonInput=runsAndLumis(),outputbranchsel="keep_and_drop.txt",maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=mods, provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent,haddFileName=opt.hadd_output)
   p.run()
 
 if __name__ == "__main__":

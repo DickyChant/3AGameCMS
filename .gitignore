@@ -106,3 +106,6 @@ crab_*/
 
 **/*test*/**
 !test/
+
+# Some other irrelevant files
+*201*csv

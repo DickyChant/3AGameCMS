@@ -19,9 +19,88 @@ class TriPhotonProducer(Module):
     pass
   def endJob(self):
     pass
+  
+  def checkHLT(self, event, trigger_base_name):
+    """
+    Check if an HLT trigger fired, handling different version suffixes.
+    In NanoAOD, HLT branches may have version suffixes like _v1, _v2, etc.
+    This function checks for the base name and common version suffixes.
+    """
+    # Try base name first (without _v suffix)
+    branch_name = trigger_base_name
+    if hasattr(event, branch_name):
+      try:
+        if getattr(event, branch_name) == 1:
+          return True
+      except:
+        pass
+    
+    # Try with _v suffix (as shown in CSV files)
+    branch_name = trigger_base_name + "_v"
+    if hasattr(event, branch_name):
+      try:
+        if getattr(event, branch_name) == 1:
+          return True
+      except:
+        pass
+    
+    # Try common version suffixes (_v1, _v2, _v3, _v4, _v5)
+    for v in range(1, 6):
+      branch_name = trigger_base_name + "_v" + str(v)
+      if hasattr(event, branch_name):
+        try:
+          if getattr(event, branch_name) == 1:
+            return True
+        except:
+          pass
+    
+    return False
   def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
     self.out = wrappedOutputTree
     self.out.branch("HLT_passEle32WPTight", "I")
+    
+    # All photon-related HLT paths for 2017 and 2018 data
+    # Double photon triggers
+    self.out.branch("HLT_DoublePhoton85", "I")
+    self.out.branch("HLT_DoublePhoton70", "I")
+    
+    # Diphoton triggers
+    self.out.branch("HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90", "I")
+    self.out.branch("HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95", "I")
+    self.out.branch("HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55", "I")
+    self.out.branch("HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55", "I")
+    self.out.branch("HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55", "I")
+    self.out.branch("HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55", "I")
+    self.out.branch("HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto", "I")
+    
+    # Triple photon triggers
+    self.out.branch("HLT_TriplePhoton_20_20_20_CaloIdLV2", "I")
+    self.out.branch("HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL", "I")
+    self.out.branch("HLT_TriplePhoton_30_30_10_CaloIdLV2", "I")
+    self.out.branch("HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL", "I")
+    self.out.branch("HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL", "I")
+    
+    # Single photon triggers
+    self.out.branch("HLT_Photon200", "I")
+    self.out.branch("HLT_Photon300_NoHE", "I")
+    self.out.branch("HLT_Photon40_HoverELoose", "I")
+    self.out.branch("HLT_Photon50_HoverELoose", "I")
+    self.out.branch("HLT_Photon60_HoverELoose", "I")
+    self.out.branch("HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15", "I")
+    self.out.branch("HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50", "I")
+    self.out.branch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3", "I")
+    self.out.branch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3", "I")
+    self.out.branch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3", "I")
+    self.out.branch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3", "I")
+    self.out.branch("HLT_Photon110EB_TightID_TightIso", "I")
+    self.out.branch("HLT_Photon120EB_TightID_TightIso", "I")
+    self.out.branch("HLT_Photon35_TwoProngs35", "I")
+    
+    # Combined flags
+    self.out.branch("HLT_passAnyTriplePhoton", "I")
+    self.out.branch("HLT_passAnyDoublePhoton", "I")
+    self.out.branch("HLT_passAnyDiphoton", "I")
+    self.out.branch("HLT_passAnyPhoton", "I")
     self.out.branch("met_user","F")
     self.out.branch("met_phi_user","F")
     self.out.branch("GoodPhoton_id","I",lenVar="nGoodPhoton")
@@ -94,7 +173,11 @@ class TriPhotonProducer(Module):
 
     met_user=-99
     met_phi_user=-99
-    if self.is_mc:
+    # Run 3 (2022/2022EE) uses DeepMET
+    if self.year in ["2022", "2022EE"]:
+      met_user=event.DeepMETResolutionTune_pt
+      met_phi_user=event.DeepMETResolutionTune_phi
+    elif self.is_mc:
       met_user=event.MET_T1Smear_pt
       met_phi_user=event.MET_T1Smear_phi
     else:
@@ -114,6 +197,266 @@ class TriPhotonProducer(Module):
             HLT_passEle32WPTight=1
 
     self.out.fillBranch("HLT_passEle32WPTight",HLT_passEle32WPTight)
+
+    # All photon-related HLT paths for 2017 and 2018 data and MC
+    # Note: 
+    #   - For DATA: HLT flags are stored AND used for filtering (require at least one photon HLT)
+    #   - For MC: HLT flags are stored but NOT used for filtering (study pass vs fail)
+    # For data, flags are checked with run range checks for proper trigger selection
+    # Initialize all to 0
+    # Double photon
+    HLT_DoublePhoton85 = 0
+    HLT_DoublePhoton70 = 0
+    # Diphoton
+    HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90 = 0
+    HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95 = 0
+    HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 0
+    HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 0
+    HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55 = 0
+    HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55 = 0
+    HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto = 0
+    # Triple photon
+    HLT_TriplePhoton_20_20_20_CaloIdLV2 = 0
+    HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL = 0
+    HLT_TriplePhoton_30_30_10_CaloIdLV2 = 0
+    HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL = 0
+    HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL = 0
+    # Single photon
+    HLT_Photon200 = 0
+    HLT_Photon300_NoHE = 0
+    HLT_Photon40_HoverELoose = 0
+    HLT_Photon50_HoverELoose = 0
+    HLT_Photon60_HoverELoose = 0
+    HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15 = 0
+    HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50 = 0
+    HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3 = 0
+    HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3 = 0
+    HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3 = 0
+    HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3 = 0
+    HLT_Photon110EB_TightID_TightIso = 0
+    HLT_Photon120EB_TightID_TightIso = 0
+    HLT_Photon35_TwoProngs35 = 0
+    # Combined flags
+    HLT_passAnyTriplePhoton = 0
+    HLT_passAnyDoublePhoton = 0
+    HLT_passAnyDiphoton = 0
+    HLT_passAnyPhoton = 0
+
+    # Check triggers for both data and MC
+    # For data: check within appropriate run ranges (for proper trigger selection and filtering)
+    # For MC: check all triggers regardless of run number (to study pass vs fail, no filtering)
+    run_number = event.run if not self.is_mc else None
+    
+    if self.year == "2017":
+      # For MC, check all triggers. For data, check within run ranges
+      check_all = self.is_mc
+      
+      # 2017: Most triggers available from run 296070 to 306460
+      if check_all or (run_number >= 296070 and run_number <= 306460):
+        # 2017: Most triggers available from run 296070 to 306460
+        if run_number >= 296070 and run_number <= 306460:
+          # Double photon triggers
+          if self.checkHLT(event, 'HLT_DoublePhoton85'):
+            HLT_DoublePhoton85 = 1
+          if self.checkHLT(event, 'HLT_DoublePhoton70'):
+            HLT_DoublePhoton70 = 1
+          # Diphoton triggers
+          if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90'):
+            HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90 = 1
+          if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95'):
+            HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95 = 1
+          if self.checkHLT(event, 'HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55'):
+            HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 1
+          # Single photon triggers
+          if self.checkHLT(event, 'HLT_Photon200'):
+            HLT_Photon200 = 1
+          if self.checkHLT(event, 'HLT_Photon300_NoHE'):
+            HLT_Photon300_NoHE = 1
+          if self.checkHLT(event, 'HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15'):
+            HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15 = 1
+        
+        # 2017: Triple photon triggers available from run 302026 to 306460
+        if check_all or (run_number >= 302026 and run_number <= 306460):
+          if self.checkHLT(event, 'HLT_TriplePhoton_20_20_20_CaloIdLV2'):
+            HLT_TriplePhoton_20_20_20_CaloIdLV2 = 1
+          if self.checkHLT(event, 'HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL'):
+            HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL = 1
+          if self.checkHLT(event, 'HLT_TriplePhoton_30_30_10_CaloIdLV2'):
+            HLT_TriplePhoton_30_30_10_CaloIdLV2 = 1
+          if self.checkHLT(event, 'HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL'):
+            HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL = 1
+          if self.checkHLT(event, 'HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL'):
+            HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL = 1
+        
+        # 2017: Late-run diphoton triggers from run 305405 to 306460
+        if check_all or (run_number >= 305405 and run_number <= 306460):
+          if self.checkHLT(event, 'HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55'):
+            HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 1
+          if self.checkHLT(event, 'HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55'):
+            HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55 = 1
+          if self.checkHLT(event, 'HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50'):
+            HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50 = 1
+          if self.checkHLT(event, 'HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3'):
+            HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3 = 1
+          if self.checkHLT(event, 'HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3'):
+            HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3 = 1
+        
+        # 2017: Very low lumi triggers from run 295965 to 306460
+        if check_all or (run_number >= 295965 and run_number <= 306460):
+          if self.checkHLT(event, 'HLT_Photon40_HoverELoose'):
+            HLT_Photon40_HoverELoose = 1
+          if self.checkHLT(event, 'HLT_Photon50_HoverELoose'):
+            HLT_Photon50_HoverELoose = 1
+          if self.checkHLT(event, 'HLT_Photon60_HoverELoose'):
+            HLT_Photon60_HoverELoose = 1
+      
+    elif self.year == "2018":
+      # For MC, check all triggers. For data, check within run ranges
+      check_all = self.is_mc
+      
+      # 2018: Most triggers available from run 315252 to 325175
+      if check_all or (run_number >= 315252 and run_number <= 325175):
+        # Double photon triggers
+        if self.checkHLT(event, 'HLT_DoublePhoton85'):
+          HLT_DoublePhoton85 = 1
+        if self.checkHLT(event, 'HLT_DoublePhoton70'):
+          HLT_DoublePhoton70 = 1
+        # Diphoton triggers
+        if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90'):
+          HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90 = 1
+        if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95'):
+          HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95 = 1
+        if self.checkHLT(event, 'HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55'):
+          HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 1
+        # Triple photon triggers
+        if self.checkHLT(event, 'HLT_TriplePhoton_20_20_20_CaloIdLV2'):
+          HLT_TriplePhoton_20_20_20_CaloIdLV2 = 1
+        if self.checkHLT(event, 'HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL'):
+          HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL = 1
+        if self.checkHLT(event, 'HLT_TriplePhoton_30_30_10_CaloIdLV2'):
+          HLT_TriplePhoton_30_30_10_CaloIdLV2 = 1
+        if self.checkHLT(event, 'HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL'):
+          HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL = 1
+        if self.checkHLT(event, 'HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL'):
+          HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL = 1
+        # Single photon triggers
+        if self.checkHLT(event, 'HLT_Photon200'):
+          HLT_Photon200 = 1
+        if self.checkHLT(event, 'HLT_Photon300_NoHE'):
+          HLT_Photon300_NoHE = 1
+        if self.checkHLT(event, 'HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15'):
+          HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15 = 1
+        if self.checkHLT(event, 'HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50'):
+          HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50 = 1
+        if self.checkHLT(event, 'HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3'):
+          HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3 = 1
+        if self.checkHLT(event, 'HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3'):
+          HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3 = 1
+        if self.checkHLT(event, 'HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3'):
+          HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3 = 1
+        if self.checkHLT(event, 'HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3'):
+          HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3 = 1
+      
+      # 2018: Early-run diphoton triggers from run 315252 to 315973
+      if check_all or (run_number >= 315252 and run_number <= 315973):
+        if self.checkHLT(event, 'HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55'):
+          HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 1
+        if self.checkHLT(event, 'HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55'):
+          HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55 = 1
+      
+      # 2018: Late-run triggers from run 315974 to 325175
+      if check_all or (run_number >= 315974 and run_number <= 325175):
+        if self.checkHLT(event, 'HLT_Photon110EB_TightID_TightIso'):
+          HLT_Photon110EB_TightID_TightIso = 1
+        if self.checkHLT(event, 'HLT_Photon120EB_TightID_TightIso'):
+          HLT_Photon120EB_TightID_TightIso = 1
+        if self.checkHLT(event, 'HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55'):
+          HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55 = 1
+        if self.checkHLT(event, 'HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto'):
+          HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto = 1
+      
+      # 2018: Tau trigger from run 317509 to 325175
+      if check_all or (run_number >= 317509 and run_number <= 325175):
+        if self.checkHLT(event, 'HLT_Photon35_TwoProngs35'):
+          HLT_Photon35_TwoProngs35 = 1
+
+    # Set combined flags
+    if (HLT_TriplePhoton_20_20_20_CaloIdLV2 == 1 or 
+        HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL == 1 or 
+        HLT_TriplePhoton_30_30_10_CaloIdLV2 == 1 or 
+        HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL == 1 or 
+        HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL == 1):
+      HLT_passAnyTriplePhoton = 1
+    
+    if (HLT_DoublePhoton85 == 1 or HLT_DoublePhoton70 == 1):
+      HLT_passAnyDoublePhoton = 1
+    
+    if (HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90 == 1 or
+        HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95 == 1 or
+        HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 == 1 or
+        HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 == 1 or
+        HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55 == 1 or
+        HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55 == 1 or
+        HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto == 1):
+      HLT_passAnyDiphoton = 1
+    
+    if (HLT_passAnyTriplePhoton == 1 or HLT_passAnyDoublePhoton == 1 or 
+        HLT_passAnyDiphoton == 1 or HLT_Photon200 == 1 or HLT_Photon300_NoHE == 1 or
+        HLT_Photon40_HoverELoose == 1 or HLT_Photon50_HoverELoose == 1 or
+        HLT_Photon60_HoverELoose == 1 or HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15 == 1 or
+        HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50 == 1 or
+        HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3 == 1 or
+        HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3 == 1 or
+        HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3 == 1 or
+        HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3 == 1 or
+        HLT_Photon110EB_TightID_TightIso == 1 or HLT_Photon120EB_TightID_TightIso == 1 or
+        HLT_Photon35_TwoProngs35 == 1):
+      HLT_passAnyPhoton = 1
+
+    # Filter events based on HLT flags
+    # For data: require at least one photon-related HLT to fire
+    # For MC: no filtering (store all events to study pass vs fail)
+    if not self.is_mc and HLT_passAnyPhoton == 0:
+      return False
+
+    # Fill all HLT branches
+    # Double photon
+    self.out.fillBranch("HLT_DoublePhoton85", HLT_DoublePhoton85)
+    self.out.fillBranch("HLT_DoublePhoton70", HLT_DoublePhoton70)
+    # Diphoton
+    self.out.fillBranch("HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90", HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90)
+    self.out.fillBranch("HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95", HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95)
+    self.out.fillBranch("HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55", HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55)
+    self.out.fillBranch("HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55", HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55)
+    self.out.fillBranch("HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55", HLT_Diphoton30_18_PVrealAND_R9Id_AND_IsoCaloId_AND_HE_R9Id_NoPixelVeto_Mass55)
+    self.out.fillBranch("HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55", HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto_Mass55)
+    self.out.fillBranch("HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto", HLT_Diphoton30_18_R9IdL_AND_HE_AND_IsoCaloId_NoPixelVeto)
+    # Triple photon
+    self.out.fillBranch("HLT_TriplePhoton_20_20_20_CaloIdLV2", HLT_TriplePhoton_20_20_20_CaloIdLV2)
+    self.out.fillBranch("HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL", HLT_TriplePhoton_20_20_20_CaloIdLV2_R9IdVL)
+    self.out.fillBranch("HLT_TriplePhoton_30_30_10_CaloIdLV2", HLT_TriplePhoton_30_30_10_CaloIdLV2)
+    self.out.fillBranch("HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL", HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL)
+    self.out.fillBranch("HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL", HLT_TriplePhoton_35_35_5_CaloIdLV2_R9IdVL)
+    # Single photon
+    self.out.fillBranch("HLT_Photon200", HLT_Photon200)
+    self.out.fillBranch("HLT_Photon300_NoHE", HLT_Photon300_NoHE)
+    self.out.fillBranch("HLT_Photon40_HoverELoose", HLT_Photon40_HoverELoose)
+    self.out.fillBranch("HLT_Photon50_HoverELoose", HLT_Photon50_HoverELoose)
+    self.out.fillBranch("HLT_Photon60_HoverELoose", HLT_Photon60_HoverELoose)
+    self.out.fillBranch("HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15", HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15)
+    self.out.fillBranch("HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50", HLT_Photon50_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3_PFMET50)
+    self.out.fillBranch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3", HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ300DEta3)
+    self.out.fillBranch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3", HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_PFJetsMJJ600DEta3)
+    self.out.fillBranch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3", HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3)
+    self.out.fillBranch("HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3", HLT_Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3)
+    self.out.fillBranch("HLT_Photon110EB_TightID_TightIso", HLT_Photon110EB_TightID_TightIso)
+    self.out.fillBranch("HLT_Photon120EB_TightID_TightIso", HLT_Photon120EB_TightID_TightIso)
+    self.out.fillBranch("HLT_Photon35_TwoProngs35", HLT_Photon35_TwoProngs35)
+    # Combined flags
+    self.out.fillBranch("HLT_passAnyTriplePhoton", HLT_passAnyTriplePhoton)
+    self.out.fillBranch("HLT_passAnyDoublePhoton", HLT_passAnyDoublePhoton)
+    self.out.fillBranch("HLT_passAnyDiphoton", HLT_passAnyDiphoton)
+    self.out.fillBranch("HLT_passAnyPhoton", HLT_passAnyPhoton)
 
     GoodPhoton_id = []
     FakePhoton_id = []
@@ -158,10 +501,14 @@ class TriPhotonProducer(Module):
     TightJet_v4 = []
     jet_v4_temp=TLorentzVector()
     lep_v4_temp=TLorentzVector()
+    # Run3 uses different jet branch names (pt instead of pt_nom)
+    use_nom = self.year not in ["2022", "2022EE"]
     for ijet in range(0, event.nJet):
-      if abs(jets[ijet].eta)>4.7 or jets[ijet].pt_nom<30: continue
+      jet_pt = jets[ijet].pt_nom if use_nom else jets[ijet].pt
+      jet_mass = jets[ijet].mass_nom if use_nom else jets[ijet].mass
+      if abs(jets[ijet].eta)>4.7 or jet_pt<30: continue
       if jets[ijet].jetId<6:continue
-      jet_v4_temp.SetPtEtaPhiM(jets[ijet].pt_nom,jets[ijet].eta,jets[ijet].phi,jets[ijet].mass_nom)
+      jet_v4_temp.SetPtEtaPhiM(jet_pt,jets[ijet].eta,jets[ijet].phi,jet_mass)
       pass_mu_dr=1
       pass_ele_dr=1
       pass_jet_dr=1
@@ -219,17 +566,17 @@ class TriPhotonProducer(Module):
     
     # Fill jet variables if jets exist
     if len(TightJet_id)>=1:
-      j1_pt=jets[TightJet_id[0]].pt_nom
+      j1_pt = jets[TightJet_id[0]].pt_nom if use_nom else jets[TightJet_id[0]].pt
       j1_eta=jets[TightJet_id[0]].eta
       j1_phi=jets[TightJet_id[0]].phi
-      j1_mass=jets[TightJet_id[0]].mass_nom
+      j1_mass = jets[TightJet_id[0]].mass_nom if use_nom else jets[TightJet_id[0]].mass
       j1_p4.SetPtEtaPhiM(j1_pt,j1_eta,j1_phi,j1_mass)
-    
+
     if len(TightJet_id)>=2:
-      j2_pt=jets[TightJet_id[1]].pt_nom
+      j2_pt = jets[TightJet_id[1]].pt_nom if use_nom else jets[TightJet_id[1]].pt
       j2_eta=jets[TightJet_id[1]].eta
       j2_phi=jets[TightJet_id[1]].phi
-      j2_mass=jets[TightJet_id[1]].mass_nom
+      j2_mass = jets[TightJet_id[1]].mass_nom if use_nom else jets[TightJet_id[1]].mass
       j2_p4.SetPtEtaPhiM(j2_pt,j2_eta,j2_phi,j2_mass)
       dRjj=j1_p4.DeltaR(j2_p4)
       dEtajj=abs(j1_eta - j2_eta)
@@ -428,3 +775,5 @@ TriPhoton2016apv = lambda: TriPhotonProducer("2016apv")
 TriPhoton2016 = lambda: TriPhotonProducer("2016")
 TriPhoton2017 = lambda: TriPhotonProducer("2017")
 TriPhoton2018 = lambda: TriPhotonProducer("2018")
+TriPhoton2022 = lambda: TriPhotonProducer("2022")
+TriPhoton2022EE = lambda: TriPhotonProducer("2022EE")

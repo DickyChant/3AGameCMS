@@ -111,6 +111,7 @@ crab_*/
 *201*csv
 
 plots_*
+test_plot.sh
 
 **/test_*log*
 **.log

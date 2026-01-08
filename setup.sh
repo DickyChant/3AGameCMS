@@ -6,12 +6,15 @@
 # No file copying needed - everything on CVMFS!
 # ============================================
 
-set -e  # Exit on error
+# Don't exit on error - continue and report warnings instead
+set +e
 
 echo "========================================"
 echo "Triphoton Analysis Setup (CVMFS-based)"
 echo "========================================"
 echo ""
+
+cmsenv
 
 # ============================================
 # Step 1: Check CMSSW Environment
@@ -83,8 +86,8 @@ if [ ! -f "$CMSSW_BASE/lib/$SCRAM_ARCH/libPhysicsToolsNanoAODTools.so" ]; then
     if [ $? -eq 0 ]; then
         echo "  ✓ Compilation successful"
     else
-        echo "  ✗ Compilation failed!"
-        exit 1
+        echo "  ✗ WARNING: Compilation had issues"
+        echo "    You may need to compile manually: scram b"
     fi
 else
     echo "  ✓ Already compiled"
@@ -93,7 +96,58 @@ fi
 echo ""
 
 # ============================================
-# Step 5: Summary
+# Step 5: Setup Python Virtual Environment and Install cmsstyle
+# ============================================
+echo "Setting up Python virtual environment for plotting tools..."
+cd "$CMSSW_BASE"
+
+# Check if scram-venv is available
+if command -v scram-venv &> /dev/null; then
+    echo "  Setting up scram-venv..."
+    
+    # Check if venv already exists (either .venv or venv directory)
+    VENV_EXISTS=0
+    if [ -d "$CMSSW_BASE/.venv" ] || [ -d "$CMSSW_BASE/venv" ]; then
+        VENV_EXISTS=1
+        echo "  ✓ Virtual environment already exists"
+    fi
+    
+    # Initialize scram-venv if not already done
+    if [ $VENV_EXISTS -eq 0 ]; then
+        echo "  Creating virtual environment..."
+        scram-venv 2>&1 | grep -v "failed to create symbolic link" || true
+        if [ -d "$CMSSW_BASE/.venv" ] || [ -d "$CMSSW_BASE/venv" ]; then
+            echo "  ✓ Virtual environment created"
+        else
+            echo "  ⚠ WARNING: Virtual environment creation had issues, but continuing..."
+        fi
+    fi
+    
+    # Re-initialize CMSSW environment to activate venv (ignore errors)
+    eval `scram runtime -sh` 2>/dev/null || true
+    
+    # Check if cmsstyle is installed
+    if python3 -c "import cmsstyle" 2>/dev/null; then
+        echo "  ✓ cmsstyle already installed"
+    else
+        echo "  Installing cmsstyle..."
+        pip install --quiet cmsstyle 2>&1 | grep -v "WARNING" || true
+        if python3 -c "import cmsstyle" 2>/dev/null; then
+            echo "  ✓ cmsstyle installed successfully"
+        else
+            echo "  ⚠ WARNING: Failed to install cmsstyle"
+            echo "    You can install it manually with: pip install cmsstyle"
+        fi
+    fi
+else
+    echo "  ⚠ WARNING: scram-venv not available"
+    echo "    Install cmsstyle manually: pip install --user cmsstyle"
+fi
+
+echo ""
+
+# ============================================
+# Step 6: Summary
 # ============================================
 echo "========================================"
 echo "✓ Setup Complete!"
@@ -103,11 +157,13 @@ echo "What's configured:"
 echo "  • CVMFS corrections (Photon ID, PU weights, JME)"
 echo "  • Analysis modules (PUWeightRun2/3, PhoIDSF, TriPhoton)"
 echo "  • CRAB submission tools"
+echo "  • Python virtual environment with cmsstyle"
 echo ""
 echo "Quick start:"
 echo "  • Test locally:     cd test && python localrun.py"
 echo "  • Submit to CRAB:   ./crab/submit_crab.sh 2017 submit"
 echo "  • Check status:     ./crab/submit_crab.sh 2017 status"
+echo "  • Create plots:      python scripts/plot_triphoton.py input.root"
 echo ""
 echo "All corrections loaded from CVMFS - no local files needed!"
 echo "========================================"

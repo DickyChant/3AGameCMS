@@ -15,16 +15,88 @@ from datetime import datetime
 ROOT.ROOT.EnableImplicitMT(4)
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
-ROOT.gStyle.SetOptStat(0)
-ROOT.gStyle.SetPalette(ROOT.kViridis)
 
-def setup_triphoton_variables(df):
+# Import and use cmsstyle for CMS-compliant plots (required)
+try:
+    import cmsstyle
+    # Get CMS object from cmsstyle
+    if hasattr(cmsstyle, 'CMS'):
+        CMS = cmsstyle.CMS
+    elif hasattr(cmsstyle, 'cms'):
+        CMS = cmsstyle.cms
+    else:
+        CMS = cmsstyle
+    
+    # Initialize CMS style
+    if hasattr(CMS, 'SetExtraText'):
+        CMS.SetExtraText("Simulation Preliminary")
+    if hasattr(CMS, 'SetLumi'):
+        CMS.SetLumi("")
+    
+    ROOT.gStyle.SetOptStat(0)
+    if hasattr(ROOT.gStyle, 'SetPalette'):
+        ROOT.gStyle.SetPalette(ROOT.kViridis)
+    
+    print("✓ Using cmsstyle for CMS-compliant plots")
+    USE_CMSSTYLE = True
+except ImportError:
+    print("❌ ERROR: cmsstyle is required but not available!")
+    print("  Please install with: scram-venv && pip install cmsstyle")
+    print("  Or run: source setup.sh")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ ERROR: cmsstyle initialization failed: {e}")
+    print("  Please check your cmsstyle installation")
+    sys.exit(1)
+
+def normalize_trigger_name(trigger_name):
+    """Remove _v suffix from trigger names if present"""
+    if trigger_name and trigger_name.endswith("_v"):
+        return trigger_name[:-2]
+    return trigger_name
+
+def get_trigger_selection(trigger_type="none", triple_photon_trigger1=None, triple_photon_trigger2=None):
+    """Build trigger selection string for RDataFrame"""
+    triple_photon_trigger1 = normalize_trigger_name(triple_photon_trigger1)
+    triple_photon_trigger2 = normalize_trigger_name(triple_photon_trigger2)
+    
+    if trigger_type == "none":
+        return None
+    
+    if trigger_type == "triple1":
+        if triple_photon_trigger1:
+            return f"{triple_photon_trigger1} == 1"
+        return None
+    
+    if trigger_type == "triple2":
+        if triple_photon_trigger2:
+            return f"{triple_photon_trigger2} == 1"
+        return None
+    
+    if trigger_type == "triple_or":
+        if triple_photon_trigger1 and triple_photon_trigger2:
+            return f"({triple_photon_trigger1} == 1) || ({triple_photon_trigger2} == 1)"
+        elif triple_photon_trigger1:
+            return f"{triple_photon_trigger1} == 1"
+        elif triple_photon_trigger2:
+            return f"{triple_photon_trigger2} == 1"
+        return "HLT_passAnyTriplePhoton == 1"
+    
+    return None
+
+def setup_triphoton_variables(df, triple_photon_trigger1=None, triple_photon_trigger2=None, no_trigger=False):
     """
     Define all triphoton variables using RDataFrame
     This creates a lazy computation graph - nothing is computed until needed
     """
     # Filter for triphoton events
     df = df.Filter("nGoodPhoton >= 3", "Triphoton events")
+    
+    # Apply trigger filter if requested
+    if not no_trigger:
+        trigger_selection = get_trigger_selection("triple_or", triple_photon_trigger1, triple_photon_trigger2)
+        if trigger_selection:
+            df = df.Filter(trigger_selection, "Triple photon trigger")
 
     # Define weight (handle GenWeight sign for NLO MC)
     df = df.Define("weight",
@@ -131,12 +203,13 @@ def setup_triphoton_variables(df):
     return df
 
 def create_canvas(name, title, width=800, height=600):
-    c = ROOT.TCanvas(name, title, width, height)
-    c.SetLeftMargin(0.12)
-    c.SetRightMargin(0.05)
-    c.SetTopMargin(0.08)
-    c.SetBottomMargin(0.12)
-    return c
+    """Create a canvas using cmsstyle.cmsCanvas (required)"""
+    # Use cmsstyle canvas
+    canv = CMS.cmsCanvas('', 0, 1, 0, 1, '', '', square=CMS.kSquare, extraSpace=0.01, iPos=0)
+    canv.SetName(name)
+    canv.SetTitle(title)
+    canv.SetCanvasSize(width, height)
+    return canv
 
 def style_histogram(hist, xtitle, ytitle, color=ROOT.kBlue+1):
     hist.SetLineColor(color)
@@ -147,22 +220,28 @@ def style_histogram(hist, xtitle, ytitle, color=ROOT.kBlue+1):
     hist.GetYaxis().SetTitleSize(0.045)
     hist.GetYaxis().SetTitleOffset(1.2)
 
-def add_cms_label(canvas, lumi_text="", extra_text="Simulation"):
+def add_cms_label(canvas, lumi_text="", extra_text="Simulation Preliminary"):
+    """Add CMS label using cmsstyle CMS object (required)"""
     canvas.cd()
-    latex = ROOT.TLatex()
-    latex.SetNDC()
-    latex.SetTextFont(61)
-    latex.SetTextSize(0.055)
-    latex.DrawLatex(0.15, 0.92, "CMS")
-    if extra_text:
-        latex.SetTextFont(52)
-        latex.SetTextSize(0.04)
-        latex.DrawLatex(0.23, 0.92, extra_text)
-    if lumi_text:
-        latex.SetTextFont(42)
-        latex.SetTextSize(0.04)
-        latex.SetTextAlign(31)
-        latex.DrawLatex(0.95, 0.92, lumi_text)
+    
+    # Extract luminosity value from lumi_text if present
+    lumi_str = ""
+    if lumi_text and "fb" in lumi_text:
+        try:
+            import re
+            match = re.search(r'(\d+\.?\d*)\s*fb', lumi_text)
+            if match:
+                lumi_str = f"{match.group(1)} fb^{{-1}}"
+        except:
+            pass
+    
+    # Set CMS labels using proper API
+    if hasattr(CMS, 'SetExtraText'):
+        CMS.SetExtraText(extra_text if extra_text else "Simulation Preliminary")
+    if hasattr(CMS, 'SetLumi'):
+        CMS.SetLumi(lumi_str)
+    
+    # The CMS label should already be drawn by cmsCanvas
 
 def plot_all_variables(df, output_dir, year, lumi):
     """Create all plots using RDataFrame lazy evaluation"""
@@ -364,6 +443,12 @@ def main():
     parser.add_argument("--year", default="2022", help="Year label")
     parser.add_argument("--lumi", type=float, default=27.0, help="Luminosity in fb^-1")
     parser.add_argument("--max-files", type=int, default=None, help="Max files")
+    parser.add_argument("--triple-trigger1", default="HLT_TriplePhoton_30_30_10_CaloIdLV2",
+                       help="First triple photon trigger name", dest="triple_trigger1")
+    parser.add_argument("--triple-trigger2", default="HLT_TriplePhoton_30_30_10_CaloIdLV2_R9IdVL",
+                       help="Second triple photon trigger name", dest="triple_trigger2")
+    parser.add_argument("--no-trigger", action="store_true",
+                       help="Don't apply triggers (for debugging only)")
     args = parser.parse_args()
 
     # Output directory
@@ -397,7 +482,10 @@ def main():
     print(f"Total events: {n_total}")
 
     # Setup all triphoton variables
-    df = setup_triphoton_variables(df)
+    df = setup_triphoton_variables(df,
+                                  triple_photon_trigger1=args.triple_trigger1,
+                                  triple_photon_trigger2=args.triple_trigger2,
+                                  no_trigger=args.no_trigger)
 
     # Count triphoton events
     n_triphoton = df.Count().GetValue()

@@ -181,7 +181,7 @@ def plot_1d_distributions(chain, output_dir, year, is_mc, lumi=1.0):
 
     # Jet distributions
     jet_vars = [
-        ("nTightJet_id", 15, 0, 15, "Number of tight jets", "Events"),
+        ("nTightJet", 15, 0, 15, "Number of tight jets", "Events"),
         ("TightJet_pt[0]", 50, 0, 400, "Leading jet p_{T} [GeV]", "Events / 8 GeV"),
         ("TightJet_eta[0]", 50, -5, 5, "Leading jet #eta", "Events"),
     ]
@@ -193,7 +193,7 @@ def plot_1d_distributions(chain, output_dir, year, is_mc, lumi=1.0):
 
         selection = "1"
         if "[" in var:
-            selection = "(nTightJet_id > 0)"
+            selection = "(nTightJet > 0)"
 
         chain.Draw(f"{var}>>h_{name}", f"{weight_expr} * ({selection})", "goff")
 
@@ -206,8 +206,8 @@ def plot_1d_distributions(chain, output_dir, year, is_mc, lumi=1.0):
 
     # Triphoton invariant mass
     mass_vars = [
-        ("triphoton_mass", 100, 0, 500, "M(#gamma#gamma#gamma) [GeV]", "Events / 5 GeV"),
-        ("Diphoton_lead_sublead_mass", 100, 0, 400, "M(#gamma_{1}#gamma_{2}) [GeV]", "Events / 4 GeV"),
+        ("Maaa", 100, 0, 500, "M(#gamma#gamma#gamma) [GeV]", "Events / 5 GeV"),
+        ("M_p1p2", 100, 0, 400, "M(#gamma_{1}#gamma_{2}) [GeV]", "Events / 4 GeV"),
     ]
 
     for var, nbins, xmin, xmax, xtitle, ytitle in mass_vars:
@@ -399,8 +399,8 @@ def plot_2d_distributions(chain, output_dir, year, is_mc, lumi=1.0):
 
     # Di-photon mass vs tri-photon mass
     h2d_mass = ROOT.TH2F("h2d_diphoton_triphoton_mass", "", 50, 0, 400, 50, 0, 500)
-    chain.Draw("triphoton_mass:Diphoton_lead_sublead_mass>>h2d_diphoton_triphoton_mass",
-               f"{weight_expr} * (triphoton_mass > 0 && Diphoton_lead_sublead_mass > 0)", "goff")
+    chain.Draw("Maaa:M_p1p2>>h2d_diphoton_triphoton_mass",
+               f"{weight_expr} * (Maaa > 0 && M_p1p2 > 0)", "goff")
 
     if h2d_mass.GetEntries() > 0:
         c = create_canvas("c_diphoton_triphoton_mass", "mass_correlation", 900, 700)

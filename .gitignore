@@ -109,3 +109,8 @@ crab_*/
 
 # Some other irrelevant files
 *201*csv
+
+plots_*
+
+**/test_*log*
+**.log

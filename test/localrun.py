@@ -10,11 +10,12 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import Pos
 from PhysicsTools.NanoAODTools.postprocessing.modules.common.countHistogramsModule import *
 from PhysicsTools.NanoAODTools.postprocessing.analysis.modules.PhoIDSFProducer import *
 from PhysicsTools.NanoAODTools.postprocessing.analysis.modules.TriPhotonProducer import *
-from PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun2 import *
 from PhysicsTools.NanoAODTools.postprocessing.modules.common.puWeightProducer import *
 from PhysicsTools.NanoAODTools.postprocessing.modules.common.PrefireCorr import *
 from PhysicsTools.NanoAODTools.postprocessing.framework.crabhelper import inputFiles, runsAndLumis
+from PhysicsTools.NanoAODTools.postprocessing.analysis.modules.PUWeightRun2 import PUWeight2016apv, PUWeight2016, PUWeight2017, PUWeight2018
 from PhysicsTools.NanoAODTools.postprocessing.analysis.modules.PUWeightRun3 import PUWeight2022, PUWeight2022EE
+from PhysicsTools.NanoAODTools.postprocessing.analysis.modules.JMECorrectionsCVMFS import JMECorrections2016apv, JMECorrections2016, JMECorrections2017, JMECorrections2018
 try:
     from PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetmetHelperRun3 import createJMECorrector
     HAS_RUN3_JME = True
@@ -22,6 +23,7 @@ except ImportError:
     HAS_RUN3_JME = False
     createJMECorrector = None
     print("[localrun] jetmetHelperRun3 not found; 2022/2022EE will run without JME corrections.")
+
 ### main python file to run ###
 
 def main():
@@ -86,13 +88,13 @@ def main():
 
   if opt.ismc:
     if opt.year == "2016a":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2016_preAPV(),PhoIDSF2016apv(),jmeCorrections_UL2016APVMC(), TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),PUWeight2016apv(),PhoIDSF2016apv(),JMECorrections2016apv(is_mc=True),TriPhoton2016apv()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2016b":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2016_postAPV(),PhoIDSF2016(),jmeCorrections_UL2016MC(),TriPhoton2016()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),PUWeight2016(),PhoIDSF2016(),JMECorrections2016(is_mc=True),TriPhoton2016()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2017":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2017(),PhoIDSF2017(),jmeCorrections_UL2017MC(),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),PUWeight2017(),PhoIDSF2017(),JMECorrections2017(is_mc=True),TriPhoton2017()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2018":
-      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),puWeight_2018(),PhoIDSF2018(),jmeCorrections_UL2018MC(),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
+      p = PostProcessor(opt.output, input_files, modules=[countHistogramsModule(),PUWeight2018(),PhoIDSF2018(),JMECorrections2018(is_mc=True),TriPhoton2018()], provenance=True,fwkJobReport=False,postfix=opt.postfix if opt.postfix else None, jsonInput=runsAndLumis(),outputbranchsel=keep_and_drop,maxEntries=opt.nEvent)
     if opt.year == "2022":
       mods = [countHistogramsModule(), PUWeight2022(), PhoIDSF2022(), TriPhoton2022()]
       jme_mod = maybe_jme_2022(is_mc=True, era="CD")

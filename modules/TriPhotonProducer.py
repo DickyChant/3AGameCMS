@@ -27,33 +27,27 @@ class TriPhotonProducer(Module):
     This function checks for the base name and common version suffixes.
     """
     # Try base name first (without _v suffix)
-    branch_name = trigger_base_name
-    if hasattr(event, branch_name):
-      try:
-        if getattr(event, branch_name) == 1:
-          return True
-      except:
-        pass
-    
+    try:
+      if getattr(event, trigger_base_name) == 1:
+        return True
+    except:
+      pass
+
     # Try with _v suffix (as shown in CSV files)
-    branch_name = trigger_base_name + "_v"
-    if hasattr(event, branch_name):
-      try:
-        if getattr(event, branch_name) == 1:
-          return True
-      except:
-        pass
-    
+    try:
+      if getattr(event, trigger_base_name + "_v") == 1:
+        return True
+    except:
+      pass
+
     # Try common version suffixes (_v1, _v2, _v3, _v4, _v5)
     for v in range(1, 6):
-      branch_name = trigger_base_name + "_v" + str(v)
-      if hasattr(event, branch_name):
-        try:
-          if getattr(event, branch_name) == 1:
-            return True
-        except:
-          pass
-    
+      try:
+        if getattr(event, trigger_base_name + "_v" + str(v)) == 1:
+          return True
+      except:
+        pass
+
     return False
   def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
     self.out = wrappedOutputTree
@@ -177,12 +171,12 @@ class TriPhotonProducer(Module):
     if self.year in ["2022", "2022EE"]:
       met_user=event.DeepMETResolutionTune_pt
       met_phi_user=event.DeepMETResolutionTune_phi
-    elif self.is_mc:
-      met_user=event.MET_T1Smear_pt
-      met_phi_user=event.MET_T1Smear_phi
     else:
-      met_user=event.MET_T1_pt
-      met_phi_user=event.MET_T1_phi
+      # Run 2 (2017/2018) uses PFMET
+      # Note: MET is only stored for reference, not used in event selection
+      # JME corrections are applied to jets (used for photon cleaning)
+      met_user = event.PFMET_pt
+      met_phi_user = event.PFMET_phi
 
     self.out.fillBranch("met_user",met_user)
     self.out.fillBranch("met_phi_user",met_phi_user)
@@ -253,27 +247,25 @@ class TriPhotonProducer(Module):
       
       # 2017: Most triggers available from run 296070 to 306460
       if check_all or (run_number >= 296070 and run_number <= 306460):
-        # 2017: Most triggers available from run 296070 to 306460
-        if run_number >= 296070 and run_number <= 306460:
-          # Double photon triggers
-          if self.checkHLT(event, 'HLT_DoublePhoton85'):
-            HLT_DoublePhoton85 = 1
-          if self.checkHLT(event, 'HLT_DoublePhoton70'):
-            HLT_DoublePhoton70 = 1
-          # Diphoton triggers
-          if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90'):
-            HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90 = 1
-          if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95'):
-            HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95 = 1
-          if self.checkHLT(event, 'HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55'):
-            HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 1
-          # Single photon triggers
-          if self.checkHLT(event, 'HLT_Photon200'):
-            HLT_Photon200 = 1
-          if self.checkHLT(event, 'HLT_Photon300_NoHE'):
-            HLT_Photon300_NoHE = 1
-          if self.checkHLT(event, 'HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15'):
-            HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15 = 1
+        # Double photon triggers
+        if self.checkHLT(event, 'HLT_DoublePhoton85'):
+          HLT_DoublePhoton85 = 1
+        if self.checkHLT(event, 'HLT_DoublePhoton70'):
+          HLT_DoublePhoton70 = 1
+        # Diphoton triggers
+        if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90'):
+          HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass90 = 1
+        if self.checkHLT(event, 'HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95'):
+          HLT_Diphoton30_22_R9Id_OR_IsoCaloId_AND_HE_R9Id_Mass95 = 1
+        if self.checkHLT(event, 'HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55'):
+          HLT_Diphoton30PV_18PV_R9Id_AND_IsoCaloId_AND_HE_R9Id_PixelVeto_Mass55 = 1
+        # Single photon triggers
+        if self.checkHLT(event, 'HLT_Photon200'):
+          HLT_Photon200 = 1
+        if self.checkHLT(event, 'HLT_Photon300_NoHE'):
+          HLT_Photon300_NoHE = 1
+        if self.checkHLT(event, 'HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15'):
+          HLT_Photon60_R9Id90_CaloIdL_IsoL_DisplacedIdL_PFHT350MinPFJet15 = 1
         
         # 2017: Triple photon triggers available from run 302026 to 306460
         if check_all or (run_number >= 302026 and run_number <= 306460):
@@ -507,7 +499,11 @@ class TriPhotonProducer(Module):
       jet_pt = jets[ijet].pt_nom if use_nom else jets[ijet].pt
       jet_mass = jets[ijet].mass_nom if use_nom else jets[ijet].mass
       if abs(jets[ijet].eta)>4.7 or jet_pt<30: continue
-      if jets[ijet].jetId<6:continue
+      # Apply jetId cut if branch exists (may not exist in pre-skimmed files)
+      try:
+        if jets[ijet].jetId<6:continue
+      except:
+        pass
       jet_v4_temp.SetPtEtaPhiM(jet_pt,jets[ijet].eta,jets[ijet].phi,jet_mass)
       pass_mu_dr=1
       pass_ele_dr=1

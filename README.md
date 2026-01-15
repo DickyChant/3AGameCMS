@@ -1,6 +1,19 @@
-# EWAA
+# Triple Photon Analysis (γγγ)
 
-0. login to lxplus8 or lxplus9, execute "cmssw-el7" to launch the singularity. **This must be done before set up the CMSSW**, otherwise there will be imcompatibility between arch and cmssw
+This repository contains the CMS analysis framework for **triple photon (γγγ)** events. The analysis selects events with three photons.
+
+## Analysis Overview
+
+- **Signal Region (SR)**: Events with ≥3 photons
+- **Sideband Regions (SB)**: Events with 1-2 photons (for background estimation)
+- **Variables**: Triple photon invariant mass (Maaa), pair masses (M_p1p2, M_p1p3, M_p2p3), kinematic variables for all three photons
+- **Optional jet variables**: If jets are present in the event, jet-photon angular variables are computed
+
+## CMSSW Setup
+
+### Option 1: CMSSW_10_6_30 (Legacy)
+
+0. login to lxplus8 or lxplus9, execute "cmssw-el7" to launch the singularity. **This must be done before set up the CMSSW**, otherwise there will be incompatibility between arch and cmssw
 1. cmsrel CMSSW_10_6_30
 2. Set up NanoAOD tools
    ```bash
@@ -15,26 +28,53 @@
    scram b
    ```
 
-3. Set up codes
-   ```bash
-   cd python/postprocessing
+### Option 2: CMSSW_13_0_X or later (Recommended for Run 3)
 
-   ##clone this repository
+For Run 3 analyses, NanoAOD-tools is integrated into newer CMSSW releases:
 
-   git clone https://github.com/menglu21/EWAA.git analysis
+```bash
+# On lxplus9 (no singularity needed)
+cmsrel CMSSW_13_0_13
+cd CMSSW_13_0_13/src
+cmsenv
 
-   cd $CMSSW_BASE/src
+# NanoAOD-tools is already available in PhysicsTools/NanoAODTools
+scram b
+```
 
-   scram b
-   ```
-    Noticed that the `crab_help.py` is written in python3, hence the `scram b` in CMSSW would leave some error message. Since this crab helper normally would not be included by other codes, you can ignore these errors.
+### Option 3: CMSSW_14_X (Latest)
 
-4. Substitute some outdated files with `init.sh`
-   ```bash
-   cd $CMSSW_BASE/src/PhysicsTools/NanoAODTools/python/postprocessing/analysis
+For the latest features and Run 3 UL corrections:
 
-   source init.sh 2017
-   ```
+```bash
+cmsrel CMSSW_14_0_7
+cd CMSSW_14_0_7/src
+cmsenv
+scram b
+```
+
+## Set up analysis codes
+
+```bash
+cd $CMSSW_BASE/src/PhysicsTools/NanoAODTools/python/postprocessing
+
+##clone this repository
+git clone <this-repository-url> analysis
+
+cd $CMSSW_BASE/src
+
+scram b
+```
+
+Note: The `crab_help.py` is written in python3, hence the `scram b` in CMSSW would leave some error message. Since this crab helper normally would not be included by other codes, you can ignore these errors.
+
+## Initialize for specific year
+
+```bash
+cd $CMSSW_BASE/src/PhysicsTools/NanoAODTools/python/postprocessing/analysis
+
+source init.sh 2017
+```
 
 ## submit jobs
 
@@ -47,6 +87,17 @@ crab submit -c configs/DoubleEGB_cfg.py
 rm crab_DoubleEG_B/inputs/*.tgz 
 
 You can also check `crab/auto_crab_example` to run crab jobs batchly and automatically.
+
+## Local running (updated for 2022/2022EE)
+
+- Entry point: `analysis/test/localrun.py`
+- Supported years: `2016a`, `2016b`, `2017`, `2018`, `2022` (preEE, CD), `2022EE` (postEE, EFG)
+- Run examples:
+  - MC preEE: `python localrun.py --year 2022 -m -i <input.root> -o <outdir>`
+  - Data postEE: `python localrun.py --year 2022EE -d -i <input.root> -o <outdir>`
+- JME: tries `jetmetHelperRun3.createJMECorrector`; if not in your env, it prints a warning and skips JME for 2022/2022EE.
+- Photon ID SF: only wired for Run2 (2016–2018). No 2022 SF module/files are hooked up yet.
+- PU/prefire: only Run2 PU/prefire are attached. 2022 PU weights are not yet added in `localrun.py`.
 
 ## corrections
 
@@ -103,5 +154,9 @@ move "others/for_prefiring/*.root" to NanoAODTools/data/prefire_maps/, and move 
 ### 3. JME correction
 (needed files are in others/for_jme, can be used directly)
 move the *.tgz to PhysicsTools/NanoAODTools/data/jme, and move "jetmetHelperRun2.py" to PhysicsTools/NanoAODTools/python/postprocessing/modules/jme
+
+### Run3 note (2022/2022EE)
+- Local running uses `jetmetHelperRun3.createJMECorrector` if present for JME; otherwise JME is skipped.
+- Run3 photon ID SF / PU weights are not yet configured here; add the corresponding modules and ROOT files before production use.
 
 ## After finisihing all the file moving, please remember delete the "others" directory, as the crab submission have size limit.

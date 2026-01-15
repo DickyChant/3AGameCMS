@@ -1,0 +1,14 @@
+{
+"EGammaC": ["EGamma_C","/EGamma/Run2022C-22Sep2023-v1/NANOAOD","crab_script_dataC.sh"],
+"EGammaD": ["EGamma_D","/EGamma/Run2022D-22Sep2023-v1/NANOAOD","crab_script_dataD.sh"],
+"TTGG": ["TTGG","/TTGG_TuneCP5_13p6TeV_amcatnlo-madspin-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"DiPhoton_0to40":["DiPhoton_0to40","/DiPhotonJetsBox_MGG-0to40_13p6TeV_sherpa/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"DiPhoton_40to80":["DiPhoton_40to80","/DiPhotonJetsBox_MGG-40to80_13p6TeV_sherpa/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"DiPhoton_80toInf":["DiPhoton_80toInf","/DiPhotonJetsBox_MGG-80_13p6TeV_sherpa/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"GJetsHT-40To100":["GJetsHT-40To100","/GJets_HT-40To100_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"GJetsHT-100To200":["GJetsHT-100To200","/GJets_HT-100To200_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"GJetsHT-200To400":["GJetsHT-200To400","/GJets_HT-200To400_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"GJetsHT-400To600":["GJetsHT-400To600","/GJets_HT-400To600_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"GJetsHT-600ToInf":["GJetsHT-600ToInf","/GJets_HT-600_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"],
+"QCD": ["QCD","/QCD_PT-15to7000_TuneCP5_Flat_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM"]
+}

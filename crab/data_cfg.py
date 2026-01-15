@@ -12,7 +12,7 @@ config.JobType.pluginName = 'Analysis'
 config.JobType.psetName = 'PSet.py'
 config.JobType.scriptExe = 'dummy'
 # hadd nano will not be needed once nano tools are in cmssw
-config.JobType.inputFiles = ['crab_script.py', '../scripts/haddnano.py','keep_and_drop.txt','dummy']
+config.JobType.inputFiles = ['crab_script.py', 'haddnano.py','keep_and_drop.txt','dummy']
 #config.JobType.sendPythonFolder = True
 
 config.section_("Data")
